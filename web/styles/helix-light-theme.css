@@ -1,0 +1,16 @@
+/* Cast Iron Charlie — Light Theme Extension
+   Helix project addendum. The base design system is dark-only; these
+   tokens derive a light-mode surface set from its own paper/white/ink
+   colors so screens can offer a dark/light toggle without inventing
+   new colors. Ember/brass/rust accents are unchanged in both modes.
+   Load after colors_and_type.css. */
+
+:root {
+  --light-bg:        var(--paper);            /* page background */
+  --light-raised:    var(--white);             /* sidebars, top bars */
+  --light-card:       rgba(10, 8, 6, 0.035);    /* cards, bubbles, inputs */
+  --light-border:     rgba(10, 8, 6, 0.12);     /* default borders */
+  --light-text-head:  var(--black);             /* headings, primary text */
+  --light-text-body:  var(--forge);             /* body copy */
+  --light-text-muted: rgba(10, 8, 6, 0.62);     /* captions, labels */
+}

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Helix — local operator console</title>
+    <link rel="stylesheet" href="/styles/cast-iron-charlie.css" />
+    <link rel="stylesheet" href="/styles/helix-light-theme.css" />
+    <style>
+      :root { --helix-bg: #100d0a; --helix-panel: #1d1713; --helix-card: #28201a; --helix-border: #49382c; --helix-text: #f1e6d5; --helix-muted: #aa9886; --helix-ember: #c4501a; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-width: 320px; background: var(--helix-bg); color: var(--helix-text); font-family: Barlow, Arial, sans-serif; }
+      button, input { font: inherit; }
+      button { cursor: pointer; }
+      .app { min-height: 100vh; display: flex; }
+      .sidebar { width: 236px; flex: none; padding: 22px 16px; background: var(--helix-panel); border-right: 1px solid var(--helix-border); display: flex; flex-direction: column; }
+      .brand { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; }
+      .logo { font-family: Georgia, serif; font-size: 1.8rem; }
+      .badge, .tag { border: 1px solid var(--helix-border); color: var(--helix-muted); font-size: .62rem; letter-spacing: .12em; padding: 4px 7px; text-transform: uppercase; }
+      .primary, .secondary { border: 1px solid var(--helix-ember); padding: 11px 14px; text-transform: uppercase; letter-spacing: .14em; font-size: .68rem; }
+      .primary { background: var(--helix-ember); color: #160d08; }
+      .secondary { background: transparent; color: var(--helix-text); border-color: var(--helix-border); }
+      .search, .composer { width: 100%; border: 1px solid var(--helix-border); background: var(--helix-card); color: var(--helix-text); padding: 11px 12px; outline: none; }
+      .search:focus, .composer:focus { border-color: var(--helix-ember); }
+      .conversation { padding: 10px; margin-top: 3px; color: var(--helix-muted); font-size: .82rem; border-left: 2px solid transparent; }
+      .conversation.active { background: var(--helix-card); color: var(--helix-text); border-left-color: var(--helix-ember); }
+      .section-label { margin: 22px 0 8px; color: var(--helix-muted); font-size: .65rem; letter-spacing: .15em; text-transform: uppercase; }
+      .connections { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--helix-border); color: var(--helix-muted); font-size: .7rem; line-height: 2; }
+      .connected { color: #9bb58c; }
+      .main { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+      .topbar { min-height: 66px; padding: 14px 26px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--helix-border); }
+      .title { font-family: Georgia, serif; font-size: 1.15rem; }
+      .top-meta { display: flex; align-items: center; gap: 9px; color: var(--helix-muted); font-size: .7rem; }
+      .thread { width: min(900px, 100%); flex: 1; margin: 0 auto; padding: 30px 30px 22px; overflow: auto; }
+      .message { max-width: 78%; margin-bottom: 22px; }
+      .message.user { margin-left: auto; }
+      .bubble { padding: 15px 18px; border: 1px solid var(--helix-border); border-radius: 5px; background: var(--helix-card); line-height: 1.55; }
+      .disclosure { margin-top: 8px; color: var(--helix-muted); font-size: .68rem; line-height: 1.6; }
+      .composer-wrap { width: min(900px, 100%); margin: 0 auto; padding: 0 30px 24px; }
+      .scope { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; color: var(--helix-muted); font-size: .7rem; }
+      .composer-row { display: flex; gap: 10px; }
+      .composer { flex: 1; }
+      .empty { color: var(--helix-muted); text-align: center; padding: 15vh 20px; }
+      @media (max-width: 720px) { .sidebar { width: 64px; padding: 18px 10px; } .sidebar .badge, .sidebar .primary, .sidebar .search, .sidebar .section-label, .sidebar .conversation, .sidebar .connections { display: none; } .logo { font-size: 1.35rem; writing-mode: vertical-rl; } .topbar { padding: 12px 16px; align-items: flex-start; } .top-meta { flex-wrap: wrap; justify-content: flex-end; } .thread, .composer-wrap { padding-left: 16px; padding-right: 16px; } .message { max-width: 94%; } }
+      @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar" aria-label="Conversation navigation">
+        <div class="brand"><span class="logo">Helix</span><span class="badge">Read-only</span></div>
+        <button class="primary" id="new-session" type="button">+ New conversation</button>
+        <label class="section-label" for="search">Find a conversation</label>
+        <input class="search" id="search" placeholder="Search conversations" />
+        <div class="section-label">Today</div>
+        <div class="conversation active">New local session</div>
+        <div class="conversation">CIC retrieval scope test</div>
+        <div class="section-label">Earlier</div>
+        <div class="conversation">IronLedger review</div>
+        <div class="conversation">Forge status</div>
+        <div class="connections"><div>ICF <span class="connected">● Connected</span></div><div>Sigil <span class="connected">● Connected</span></div></div>
+      </aside>
+      <main class="main">
+        <header class="topbar">
+          <div class="title">Local operator session</div>
+          <div class="top-meta"><span id="model">WhichLLM · automatic</span><span class="badge" id="persistence">Local-only</span><span class="badge" id="daemon-state">Checking…</span></div>
+        </header>
+        <section class="thread" id="thread" aria-live="polite"><div class="empty" id="empty">Ask Helix about your governed context.<br /><small>Automatic retrieval is ready when ICF is connected.</small></div></section>
+        <form class="composer-wrap" id="ask-form">
+          <div class="scope"><span>Scope</span><span class="tag">Automatic</span><span class="tag">Read-only</span><button class="secondary" type="button" id="scope">Edit scope</button></div>
+          <div class="composer-row"><input class="composer" id="prompt" autocomplete="off" placeholder="Ask Helix…" aria-label="Ask Helix" required /><button class="primary" type="submit">Send →</button></div>
+          <div class="disclosure" id="notice">ICF lineage and source disclosure will appear with each governed response.</div>
+        </form>
+      </main>
+    </div>
+    <script>
+      const state = { sessionId: null };
+      const $ = (id) => document.getElementById(id);
+      const setState = (text, good = false) => { $('daemon-state').textContent = text; $('daemon-state').classList.toggle('connected', good); };
+      async function json(path, init) { const res = await fetch(path, init); const body = await res.json(); if (!res.ok) throw new Error(body.code || `HTTP_${res.status}`); return body; }
+      async function ensureSession() { if (!state.sessionId) state.sessionId = (await json('/v1/sessions', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).sessionId; return state.sessionId; }
+      function addMessage(text, user, disclosure) { $('empty')?.remove(); const item = document.createElement('article'); item.className = `message${user ? ' user' : ''}`; item.innerHTML = `<div class="bubble"></div>${disclosure ? `<div class="disclosure">${disclosure}</div>` : ''}`; item.querySelector('.bubble').textContent = text; $('thread').append(item); item.scrollIntoView({ behavior: 'smooth', block: 'end' }); }
+      async function refresh() { try { const status = await json('/v1/status'); setState(`Daemon · ${status.status}`, true); } catch { setState('Daemon unavailable'); } }
+      $('ask-form').addEventListener('submit', async (event) => { event.preventDefault(); const input = $('prompt'); const text = input.value.trim(); if (!text) return; input.value = ''; addMessage(text, true); try { const sessionId = await ensureSession(); const task = await json('/v1/tasks', { method: 'POST', headers: { 'content-type': 'application/json', 'idempotency-key': `ui-${Date.now()}` }, body: JSON.stringify({ sessionId, instruction: text }) }); addMessage(`Task ${task.id} accepted. Helix will return governed evidence and model disclosure when the configured adapters are connected.`, false, `State: ${task.state} · Persistence: session policy · Governance: ICF boundary active`); } catch (error) { addMessage(`Request unavailable: ${error.message}`, false, 'No governed response was produced. Check daemon and ICF status before retrying.'); } });
+      $('new-session').addEventListener('click', () => { state.sessionId = null; $('thread').innerHTML = '<div class="empty" id="empty">New local session.<br /><small>Governed content remains session-scoped until explicitly exported.</small></div>'; });
+      $('scope').addEventListener('click', () => { $('notice').textContent = 'Scope editing will use ICF context packets; automatic retrieval remains the default.'; });
+      refresh();
+    </script>
+  </body>
+</html>
