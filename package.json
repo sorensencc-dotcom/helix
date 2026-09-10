@@ -1,0 +1,35 @@
+{
+  "name": "helix",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "helix": "./dist/cli.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "lint": "eslint .",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"*.json\"",
+    "test": "vitest run",
+    "cli": "tsx src/cli.ts",
+    "package": "npm run build && npm pack --dry-run",
+    "package:validate": "node packaging/validate-manifest.mjs",
+    "check": "npm run build && npm run lint && npm run format:check && npm test"
+  },
+  "dependencies": {
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@typescript-eslint/eslint-plugin": "^8.31.0",
+    "@typescript-eslint/parser": "^8.31.0",
+    "eslint": "^9.25.0",
+    "prettier": "^3.5.3",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.2"
+  }
+}

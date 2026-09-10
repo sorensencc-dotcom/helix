@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:helix:adapter:icf:v1",
+  "title": "Helix ICF adapter v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "correlationId", "identity", "query", "governed"],
+  "properties": {
+    "contract": { "const": "helix-adapter.v1" },
+    "correlationId": { "type": "string", "pattern": "^corr_[a-z0-9-]+$", "maxLength": 128 },
+    "identity": { "$ref": "#/$defs/identity" },
+    "query": { "type": "string", "minLength": 1, "maxLength": 20000 },
+    "governed": { "type": "boolean" }
+  },
+  "$defs": {
+    "identity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["windowsIdentity", "icfIdentity", "sigilIdentity"],
+      "properties": {
+        "windowsIdentity": { "type": "string", "minLength": 1 },
+        "icfIdentity": { "type": "string", "minLength": 1 },
+        "sigilIdentity": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
