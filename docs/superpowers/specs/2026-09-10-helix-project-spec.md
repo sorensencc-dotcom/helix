@@ -83,6 +83,30 @@ Domain slices do not bypass the foundation. Write capabilities remain outside cu
 
 The project is not production-ready until unit, contract, integration, security, CLI E2E, browser E2E, and performance suites pass; signed Windows packaging and clean-machine lifecycle tests pass; live adapter behavior is verified; remote delivery is recorded; and production approval is explicit. Local candidate tests do not prove live integration, remote delivery, or production readiness.
 
+## Session lifecycle
+
+Sessions are created only after Windows operator authentication and receive a unique session ID, creation time, client identity, persistence class, governance state, retention policy, and inactivity deadline. A session may be `NEW`, `ACTIVE`, `IDLE`, `EXPIRED`, `CLOSED`, or `PURGED`. `NEW` becomes `ACTIVE` after authentication; `ACTIVE` may become `IDLE`, `CLOSED`, or `EXPIRED`; `IDLE` may return to `ACTIVE` after reauthentication; `EXPIRED` and `CLOSED` reject new work; `PURGED` has no recoverable session content.
+
+Session close, expiry, and purge remove governed content from RAM, cancel or queue work according to task policy, and emit non-sensitive lifecycle records. Ordinary history follows retention policy. Governed content never becomes persistent through session renewal, background activity, crash recovery, or client reconnect.
+
+## Task lifecycle
+
+Every prompt or automation request receives a task ID, correlation ID, session ID, idempotency key, submitted time, effective scope, model decision, persistence class, and governance state. Tasks use explicit states: `ACCEPTED`, `CONTEXT_PENDING`, `RETRIEVAL_PENDING`, `MODEL_PENDING`, `STREAMING`, `PROPOSED`, `APPROVAL_REQUIRED`, `QUEUED`, `SUCCEEDED`, `FAILED`, `CANCELLED`, `DENIED`, and `EXPIRED`.
+
+Only legal state transitions are accepted. Duplicate idempotency keys return the original task and outcome. Client cancellation cancels ungoverned work; governed work cancels or remains queued and never downgrades. Disconnects do not erase durable governed task status. Every terminal task state includes a safe, non-secret reason, correlation ID, and ICF or Sigil receipt when applicable.
+
+## Configuration model
+
+Configuration is per-user and local-only. Precedence is explicit: built-in safe defaults, versioned configuration file, operator environment overrides, then command-line or per-session overrides. Secrets are resolved only through Windows DPAPI-protected storage and are never accepted from committed files, ordinary history, prompts, logs, telemetry, or process snapshots.
+
+Configuration covers daemon bind address, allowed local clients, ICF/WhichLLM/Sigil endpoints and versions, timeout and retry limits, model cloud permission, request and evidence limits, concurrency and queue limits, retention window, data/export directories, logging redaction, and release channel. Startup validates configuration against a versioned schema, rejects unknown or unsafe values, reports field-level safe errors, and refuses to start when authority endpoints or key settings are ambiguous. Runtime changes require explicit validation and an audit record; security-sensitive settings require restart.
+
+## Error taxonomy
+
+Errors use stable versioned codes grouped by boundary: `AUTH_*` for Windows or identity failures, `CONFIG_*` for invalid or unsafe configuration, `CONTRACT_*` for schema or version failures, `POLICY_*` for capability or scope denial, `CONTEXT_*` for ICF context and lineage failures, `RETRIEVAL_*` for governed source failures, `MODEL_*` for catalog, routing, or execution failures, `SIGIL_*` for proposal, approval, or execution failures, `SESSION_*` for lifecycle failures, `TASK_*` for invalid state or idempotency failures, `STORAGE_*` for encryption, key, migration, or deletion failures, `RESOURCE_*` for limits and concurrency, and `INTERNAL_*` for unexpected faults.
+
+Every error includes code, summary, correlation ID, task or session ID when available, current state, retryability, and safe recovery action. Error responses never include secrets, credentials, raw prompts, governed payloads, stack traces, or provider-sensitive data. Retryable errors require bounded retry policy; authentication, policy, contract, key-loss, and unsafe-configuration errors are non-retryable until operator action changes state.
+
 ## Current blockers
 
 - ICF, WhichLLM, and Sigil owners must supply and approve concrete endpoint, authentication, schema, retry, identity, and receipt contracts.
