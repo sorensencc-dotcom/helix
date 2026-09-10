@@ -10,7 +10,7 @@ Helix is a personal, local-first AI assistant for IronLedger and IronCommand For
 ## Goals
 
 - Provide one stable API shared by HTTP automation, CLI, and browser clients.
-- Delegate automatic model selection to Toolforge WhichLLM.
+- Delegate model selection to Toolforge WhichLLM, with cloud routing disabled unless the operator explicitly enables cloud use for the request or session.
 - Offer a model picker ordered by WhichLLM priority, with local and cloud availability visible.
 - Retrieve automatically from governed sources, while allowing operator scope constraints and explicit source selection.
 - Disclose sources, model choice, persistence mode, governance state, and lineage state in every response.
@@ -58,7 +58,7 @@ Internal modules must follow one-way dependency rules: transport clients depend 
 
 Before implementation, each adapter must have a versioned contract document and contract tests covering schemas, authentication, identity propagation, timeout limits, retry policy, idempotency, version negotiation, and failure states. Adapter contracts must define what data may cross the boundary and must reject unknown or over-broad capabilities by default.
 
-The ICF adapter must define context-packet requests, retrieval requests, source and lineage response fields, evidence logging, queue submission, and fail-closed behavior. The WhichLLM adapter must define catalog discovery, priority ordering, capability filtering, automatic decisions, explicit override validation, provider classification, and unavailable-model behavior. The Sigil adapter must define proposed-task envelopes, capability checks, approval requests, approval outcomes, execution receipts, sandbox identity, and the rule that Helix never executes an action directly.
+The ICF adapter must define context-packet requests, retrieval requests, source and lineage response fields, evidence logging, queue submission, and fail-closed behavior. The WhichLLM adapter must define catalog discovery, priority ordering, capability filtering, automatic decisions, explicit override validation, provider classification, and unavailable-model behavior. The Sigil adapter must define proposed-task envelopes, capability checks, approval requests, approval outcomes, execution receipts, sandbox identity, and the rule that Helix never executes an action directly. These contracts live under `docs/contracts/` as versioned JSON Schema plus Markdown behavior specifications; compatibility requires additive changes or an explicit major-version migration and contract-test update.
 
 The Windows access layer must define how the daemon authenticates local clients and how the authenticated operator maps to ICF and Sigil identities. Tokens and credentials must remain outside persisted sessions and audit payloads. Every remote or local adapter call must have bounded timeouts, structured error codes, and correlation IDs shared with the Helix response and relevant ICF or Sigil record.
 
@@ -97,7 +97,7 @@ The browser UI must support keyboard-only operation, visible focus, screen-reade
 
 ## Windows distribution and lifecycle
 
-The foundation targets Windows x64 first and must be usable without a development checkout. A release must provide a versioned package containing the daemon, CLI, and browser assets, with a documented install directory, per-user configuration directory, local encrypted data directory, and governed export directory. Installation must register a per-user daemon lifecycle without requiring administrator privileges unless a future operator explicitly chooses a machine-wide install.
+The foundation targets Windows x64 first and must be usable without a development checkout. A release must provide a signed MSIX package containing the daemon, CLI, and browser assets, with a documented install directory, per-user configuration directory, local encrypted data directory, and governed export directory. Installation must register a per-user daemon lifecycle without requiring administrator privileges unless a future operator explicitly chooses a machine-wide install.
 
 The CLI must provide start, stop, status, doctor, and uninstall operations. The browser client must launch against the local daemon and show a clear unavailable-daemon recovery path. Configuration must identify ICF, WhichLLM, and Sigil endpoints without storing secrets in the repository or ordinary session database. Updates must preserve encrypted ordinary history, never overwrite governed exports, verify package checksums, and support rollback after failed startup or migration. CI must build the package, run contract and smoke tests, and publish versioned artifacts through the chosen release channel.
 
@@ -111,7 +111,7 @@ If ICF is unavailable, governed retrieval fails closed. Helix may continue ungov
 
 WhichLLM is authoritative for automatic model selection across local and cloud providers. The browser and CLI model pickers display the available catalog in WhichLLM priority order, including provider type, availability, and relevant capability or routing metadata.
 
-An operator may override automatic selection only with a model WhichLLM reports as available. Helix must not silently substitute another model when an explicit override is unavailable; it returns `MODEL_UNAVAILABLE`.
+An operator may override automatic selection only with a model WhichLLM reports as available. Cloud models require explicit operator cloud enablement for the request or session, and governed content must never be sent to a cloud provider. Helix must not silently substitute another model when an explicit override is unavailable; it returns `MODEL_UNAVAILABLE`.
 
 ## Persistence and memory policy
 
@@ -123,7 +123,7 @@ The operator may explicitly export or pin governed content. Exports must be encr
 
 ## Storage and key-management requirements
 
-The first Windows implementation must use per-user key protection backed by Windows DPAPI or Windows Credential Manager; keys must never be stored beside the database, in configuration files, logs, prompts, or environment snapshots. Conversation records use authenticated envelope encryption with a documented algorithm and key version. The database must use a schema version and migration policy that preserves ordinary history while rejecting unsafe or partial migrations.
+The first Windows implementation must use Windows DPAPI with `CurrentUser` scope as the primary key-protection mechanism; keys must never be stored beside the database, in configuration files, logs, prompts, or environment snapshots. Conversation records use authenticated envelope encryption with a documented algorithm and key version. The database must use a schema version and migration policy that preserves ordinary history while rejecting unsafe or partial migrations. DPAPI key loss is a hard recovery state: Helix must not silently create a replacement key or claim old history is available.
 
 The threat model covers copied database files, another local Windows account, crash recovery files, temporary export files, logs, backups, and accidental cloud sync. Helix must exclude governance-sensitive content from persistent transactions, telemetry, crash reports, and model-routing metadata. Explicit exports use authenticated encryption and SHA-256 checksums, retain the previous valid export until replacement succeeds, and record only non-secret metadata in the mutation ledger. Deletion tests must verify removal from active records, indexes, temporary files, and application caches; cryptographic acknowledgment must identify the deleted object, operator, timestamp, and resulting state without retaining deleted content.
 
@@ -155,13 +155,13 @@ Implementation must establish a TypeScript test framework and CI before feature 
 
 The system MUST:
 
-- Stream responses over HTTP to the CLI, browser, and daemon-integrated clients.
+- Stream responses over HTTP using Server-Sent Events (SSE) with versioned `delta`, `metadata`, `error`, and terminal `done` events; clients must support reconnect using the request correlation ID without duplicating work.
 - Propagate client cancellation to the model adapter, ICF, Sigil, retrieval, and toolchain.
 - Enforce hard limits on request payloads, prompts, attachments, retrieval volume, token count, object count, per-item and aggregate evidence, response bytes, response tokens, and streaming duration.
 - Enforce per-session and daemon-wide concurrency limits; excess work is rejected deterministically or placed in bounded, governed queues.
 - Maintain bounded queues for governance-grade work with durable `pending`, `running`, `succeeded`, `failed`, `cancelled`, and `expired` status for audit.
 - Define and enforce stage timeouts for client ingress, ICF/retrieval, model execution, Sigil/post-processing, and client egress.
-- Apply backpressure when a client disconnects or stops reading; cancel or downgrade work without an active consumer and deterministically release buffers, model slots, and retrieval handles.
+- Apply backpressure when a client disconnects or stops reading; cancel ungoverned work without an active consumer and deterministically release buffers, model slots, and retrieval handles. Governed work must cancel or remain queued; it must never downgrade to ungoverned reasoning.
 - Emit metrics for per-stage and end-to-end latency, queue depth and age, model duration and token throughput, retrieval size, failures by type, and cancellations by source and stage.
 - Maintain repeatable performance tests for normal and above-normal concurrency, slow adapters, evidence near configured limits, and repeated transient failures and retries.
 
