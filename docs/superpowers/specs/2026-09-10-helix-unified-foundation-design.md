@@ -75,6 +75,16 @@ The versioned Helix API centers on four objects:
 
 Every response must disclose whether selection was automatic or overridden, which sources were used, whether content is persistent or session-only, whether ICF is authoritative and available, and whether an action is proposed, queued, pending approval, denied, or executed.
 
+## Client experience
+
+The HTTP API is the canonical client contract. The CLI and browser UI must not implement separate policy logic; they render the same session, model, source, and execution states returned by the daemon.
+
+The browser UI is a focused operator console rather than a generic dashboard. The primary hierarchy is conversation first, current model and scope second, and trust/audit details third. The composer exposes automatic model selection, the WhichLLM-prioritized model picker, source scope controls, and a visible persistence mode. A response presents answer, sources, model decision, governance state, lineage ID, and any proposed action in that order. Sensitive actions use an explicit Sigil approval card with action summary, capability, scope, and approval state.
+
+Required client states are: first-run with no sessions, empty search results, loading retrieval, model catalog unavailable, ICF degraded, queued governance request, denied request, unavailable model override, failed response, and expired session. Each state must explain what happened, show the next safe operator action, and never imply that an unverified answer is governed. Long model names, long source names, no-source answers, and large evidence sets must remain readable without breaking layout.
+
+The browser UI must support keyboard-only operation, visible focus, screen-reader labels for model and scope controls, text equivalents for status icons, minimum WCAG 2.1 AA contrast, and responsive layouts for desktop and narrow windows. The CLI must expose equivalent controls and machine-readable JSON output. HTTP clients must receive stable error codes and disclosure fields rather than UI-specific strings.
+
 ## Retrieval policy
 
 Automatic retrieval is the default. Operators can constrain scope at any time or explicitly select a source for governance-grade work. Helix must disclose all sources used and send retrieval lineage to ICF. Source selection must not bypass ICF policy or lineage checks.
