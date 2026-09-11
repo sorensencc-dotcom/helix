@@ -1,14 +1,7 @@
 import { z } from "zod";
+import { identityEnvelope } from "../domain/identity.js";
 
 export const adapterVersion = "helix-adapter.v1" as const;
-
-const identityEnvelope = z
-  .object({
-    windowsIdentity: z.string().min(1),
-    icfIdentity: z.string().min(1),
-    sigilIdentity: z.string().min(1),
-  })
-  .strict();
 
 const baseRequest = z
   .object({

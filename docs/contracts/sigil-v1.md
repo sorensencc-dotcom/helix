@@ -12,7 +12,7 @@ Requests use [`sigil-v1.schema.json`](sigil-v1.schema.json). A proposal includes
 
 ## Behavior
 
-Every proposed action requires capability validation, scope validation, identity verification, and Sigil approval before execution. Execution results require a Sigil receipt; absence of a receipt is failure. Retries and cancellation preserve proposal and correlation identity and follow owner-declared rules. Duplicate submissions return the original proposal/outcome.
+Every proposed action requires capability validation, scope validation, identity verification, and Sigil approval before execution. Execution results require a Sigil receipt; absence of a receipt is failure. Requests carry the Helix-owned Windows and session identity envelope; negotiated ICF and Sigil authority claims are optional until those authorities are locked. Retries and cancellation preserve proposal and correlation identity and follow owner-declared rules. Duplicate submissions return the original proposal/outcome.
 
 ## Failure matrix
 

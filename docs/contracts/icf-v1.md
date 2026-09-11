@@ -12,7 +12,7 @@ Requests use [`icf-v1.schema.json`](icf-v1.schema.json). Responses use the share
 
 ## Behavior
 
-ICF retrieval is automatic unless policy constrains sources. Governed retrieval fails closed when ICF is unavailable. Ungoverned read-only work may degrade, but must disclose degraded status. Requests carry Windows, ICF, Sigil, session, and correlation identity. Retries apply only to owner-declared retryable failures, remain bounded, and preserve correlation identity. Duplicate requests return the original outcome.
+ICF retrieval is automatic unless policy constrains sources. Governed retrieval fails closed when ICF is unavailable. Ungoverned read-only work may degrade, but must disclose degraded status. Requests carry the Helix-owned Windows and session identity envelope; negotiated ICF and Sigil authority claims are optional until those authorities are locked. Retries apply only to owner-declared retryable failures, remain bounded, and preserve correlation identity. Duplicate requests return the original outcome.
 
 ## Failure matrix
 

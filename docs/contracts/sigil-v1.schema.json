@@ -15,12 +15,37 @@
   "$defs": {
     "identity": {
       "type": "object", "additionalProperties": false,
-      "required": ["windowsIdentity", "icfIdentity", "sigilIdentity"],
+      "required": ["windows", "helixSession"],
       "properties": {
-        "windowsIdentity": { "type": "string", "minLength": 1 },
-        "icfIdentity": { "type": "string", "minLength": 1 },
-        "sigilIdentity": { "type": "string", "minLength": 1 }
+        "windows": { "$ref": "#/$defs/windows" },
+        "helixSession": { "$ref": "#/$defs/helixSession" },
+        "icf": { "$ref": "#/$defs/authority" },
+        "sigil": { "$ref": "#/$defs/authority" }
       }
+    },
+    "windows": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sid", "upn", "groups"],
+      "properties": {
+        "sid": { "type": "string", "minLength": 1 },
+        "upn": { "type": "string", "minLength": 1 },
+        "groups": { "type": "array", "maxItems": 256, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "helixSession": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sessionId", "correlationId", "createdAt", "governed"],
+      "properties": {
+        "sessionId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "correlationId": { "type": "string", "pattern": "^corr_[a-z0-9-]+$", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "governed": { "type": "boolean" }
+      }
+    },
+    "authority": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": { "id": { "type": "string", "minLength": 1 }, "version": { "type": "string", "minLength": 1 } }
     }
   }
 }

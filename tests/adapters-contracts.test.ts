@@ -15,9 +15,19 @@ import {
 } from "../src/adapters/boundary.js";
 
 const identity = {
-  windowsIdentity: "windows:test-user",
-  icfIdentity: "icf:helix",
-  sigilIdentity: "sigil:helix",
+  windows: {
+    sid: "S-1-5-21-fixture",
+    upn: "operator@example.test",
+    groups: [],
+  },
+  helixSession: {
+    sessionId: "session_fixture",
+    correlationId: "corr_fixture-001",
+    createdAt: "2026-09-10T12:00:00.000Z",
+    governed: true,
+  },
+  icf: { id: "icf-helix-fixture", version: "icf.v1" },
+  sigil: { id: "sigil-helix-fixture", version: "sigil.v1" },
 };
 
 const cases = [
