@@ -109,3 +109,5 @@ Branch `main`, six commits ahead of `origin/main`. Uncommitted implementation no
 - SessionService fixture coverage added: ordered retrieval, model selection, response, persistence, audit, and fail-closed retrieval. Build, lint, formatting, and 46 tests across 14 files pass. Live ICF/Sigil/WhichLLM, SSPI, signed MSIX, and clean-machine evidence remain blocked by environment prerequisites.
 
 - Added deterministic docs:audit tooling: local Markdown-link validation, Cathryn Lavery diagram triplet checks, Mermaid-details checks, and PNG-embed checks. Wired docs:audit into npm run check. Audit and full check pass: 14 Markdown files, 1 diagram, 14 test files, 46 tests.
+
+- Locked local composition contract in src/application/composition-contract.ts: request/session envelopes, retrieval, model decision, response, persistence, audit, and separate task metadata types. Remote adapter schemas remain external-authority gated.
