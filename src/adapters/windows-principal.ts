@@ -1,4 +1,5 @@
 import type { IncomingMessage } from "node:http";
+import { z } from "zod";
 import {
   windowsOperatorIdentity,
   type IdentityEnvelope,
@@ -44,4 +45,19 @@ export class IisHttpSysPrincipalResolver implements WindowsPrincipalResolver {
     }
     return parsed.data;
   }
+}
+
+const windowsBridgeResponse = z
+  .object({
+    contract: z.literal("helix.windows-principal.v1"),
+    identity: windowsOperatorIdentity,
+  })
+  .strict();
+
+export function parseWindowsBridgeResponse(value: unknown): WindowsOperator {
+  const parsed = windowsBridgeResponse.safeParse(value);
+  if (!parsed.success) {
+    throw new WindowsAuthenticationError("WINDOWS_IDENTITY_INVALID");
+  }
+  return parsed.data.identity;
 }

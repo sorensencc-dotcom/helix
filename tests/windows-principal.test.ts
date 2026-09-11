@@ -35,3 +35,28 @@ describe("IIS/HTTP.sys Windows principal adapter", () => {
     );
   });
 });
+
+it("accepts only the versioned native bridge response", async () => {
+  const { parseWindowsBridgeResponse } =
+    await import("../src/adapters/windows-principal.js");
+  expect(
+    parseWindowsBridgeResponse({
+      contract: "helix.windows-principal.v1",
+      identity: {
+        sid: "S-1-5-21-fixture",
+        upn: "operator@example.test",
+        groups: [],
+      },
+    }).sid,
+  ).toBe("S-1-5-21-fixture");
+  expect(() =>
+    parseWindowsBridgeResponse({
+      contract: "helix.windows-principal.v0",
+      identity: {
+        sid: "S-1-5-21-fixture",
+        upn: "operator@example.test",
+        groups: [],
+      },
+    }),
+  ).toThrow("WINDOWS_IDENTITY_INVALID");
+});
