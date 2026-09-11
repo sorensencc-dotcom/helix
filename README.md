@@ -16,7 +16,7 @@ Helix does not own every capability in the system:
 
 ## Architecture
 
-![Helix architecture](docs/diagrams/helix-architecture.svg)
+![Helix architecture](docs/diagrams/helix-architecture.png)
 
 [Open the standalone architecture diagram](docs/diagrams/helix-architecture.html)
 
@@ -69,7 +69,7 @@ The local daemon binds to loopback by default. Non-loopback binding is rejected 
 - [Unified foundation design](docs/superpowers/specs/2026-09-10-helix-unified-foundation-design.md)
 - [Phase 8 release-readiness design](docs/superpowers/specs/2026-09-10-helix-phase-8-integration-release-readiness-design.md)
 - [Contracts index](docs/contracts/README.md)
-- [Phase 8 implementation plan](docs/superpowers/plans/helix-phase-8-implementation-plan.md)
+- [Phase 8 implementation plan](docs/superpowers/plans/2026-09-10-helix-phase-8-implementation-plan.md)
 
 ## Security and release posture
 

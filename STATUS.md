@@ -29,15 +29,25 @@ Build the unified foundation for Helix, a local personal AI assistant serving Ir
 - `7279be8` — engineering design completion
 - `83471c6` — runtime contract hardening
 - `8b111d7` — implementation plan
+- `aabf48a` — Phase 8 authority lock: canonical `HELIX_*_URL` endpoints and
+  identity/receipt field mappings for ICF, Sigil, WhichLLM; no credentials
+  recorded, live activation still gated on reachable DNS and owner-verified
+  integration evidence
 
 ## Next action
 
-Obtain concrete ICF, WhichLLM, and Sigil owner protocols before implementing live adapter transport.
+Obtain concrete ICF, WhichLLM, and Sigil owner protocols before implementing live adapter transport. No live endpoint tests are possible yet — the authority lock records approved URLs but activation is still gated on reachable DNS and Windows-authenticated integration evidence.
 
 ## Blockers
 
 - Confirm concrete ICF, WhichLLM, and Sigil adapter protocols before integration work.
 - Supply MSIX signing identity and release channel before packaging work.
+
+## Audits (2026-09-11)
+
+- Doc link audit: all `.md` cross-references in `README.md` and `docs/` resolve. Found and fixed two real defects from the authority-lock commit: a literal `` `r`n `` escape sequence leaked into `docs/contracts/README.md` (merged two list items onto one line), and a stale filename in `README.md` pointing at a non-dated `helix-phase-8-implementation-plan.md` instead of the actual `2026-09-10-helix-phase-8-implementation-plan.md`.
+- Diagram: `docs/diagrams/helix-architecture.html`/`.svg` existed but had no PNG per the Cathryn Lavery diagram-design standard. Rendered `helix-architecture.png` via headless Chrome and repointed the `README.md` embed from `.svg` to `.png`.
+- `npm run check`: 13 test files, 44 tests, all pass.
 
 ## Working state
 
