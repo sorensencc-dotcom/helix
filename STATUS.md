@@ -113,3 +113,5 @@ Branch `main`, six commits ahead of `origin/main`. Uncommitted implementation no
 - Locked local composition contract in src/application/composition-contract.ts: request/session envelopes, retrieval, model decision, response, persistence, audit, and separate task metadata types. Remote adapter schemas remain external-authority gated.
 
 - Added ComposedSessionService using the locked local composition contract. It forwards typed retrieval, model, response, persistence, and append-only audit requests, rejects governed fail-closed retrieval, and returns DaemonResponse without mixing TaskMetadata.
+
+- Added ComposedSessionService contract tests: typed request propagation, ordered persistence/audit, response projection, and governed fail-closed short-circuit. Full check passes: 15 files, 48 tests.
