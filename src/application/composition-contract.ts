@@ -11,8 +11,8 @@ export interface RequestEnvelope {
   readonly sessionId?: SessionId;
   readonly payload: unknown;
   readonly scope: GovernanceScope;
-  readonly requestedModel?: string;
-  readonly requestedSources?: readonly string[];
+  readonly requestedModel?: string | undefined;
+  readonly requestedSources?: readonly string[] | undefined;
   readonly timestamp: string;
 }
 
@@ -28,7 +28,7 @@ export interface SessionContext {
   readonly governanceState: GovernanceScope;
   readonly persistenceClass: "encrypted-sqlite" | "ram-only";
   readonly icfAvailable: boolean;
-  readonly lineageState?: unknown;
+  readonly lineageState?: unknown | undefined;
   readonly clientType: ClientType;
 }
 
@@ -36,7 +36,7 @@ export interface RetrievalRequest {
   readonly session: SessionContext;
   readonly payload: unknown;
   readonly constraints: {
-    readonly sources?: readonly string[];
+    readonly sources?: readonly string[] | undefined;
     readonly scope: GovernanceScope;
   };
 }
@@ -44,14 +44,14 @@ export interface RetrievalRequest {
 export interface RetrievalResponse {
   readonly contextPacket: unknown;
   readonly sourcesUsed: readonly string[];
-  readonly lineageRecord?: unknown;
+  readonly lineageRecord?: unknown | undefined;
   readonly state: RetrievalState;
 }
 
 export interface ModelSelectionRequest {
   readonly session: SessionContext;
   readonly retrieval: RetrievalResponse;
-  readonly requestedModel?: string;
+  readonly requestedModel?: string | undefined;
 }
 
 export interface ModelSelectionDecision {
@@ -71,11 +71,11 @@ export interface ResponseRequest {
 export interface ResponseResult {
   readonly correlationId: CorrelationId;
   readonly answer: unknown;
-  readonly proposedActions?: readonly unknown[];
+  readonly proposedActions?: readonly unknown[] | undefined;
   readonly sourcesUsed: readonly string[];
   readonly modelUsed: string;
-  readonly confidence?: number;
-  readonly lineageId?: string;
+  readonly confidence?: number | undefined;
+  readonly lineageId?: string | undefined;
   readonly stateDisclosures: {
     readonly persistenceMode: string;
     readonly sourceState: RetrievalState;
@@ -90,13 +90,13 @@ export interface TaskMetadata {
   readonly proposedAction: unknown;
   readonly approvalState: string;
   readonly receiptState: string;
-  readonly sigilReference?: unknown;
+  readonly sigilReference?: unknown | undefined;
 }
 
 export interface PersistenceRequest {
   readonly session: SessionContext;
   readonly response: ResponseResult;
-  readonly taskMetadata?: readonly TaskMetadata[];
+  readonly taskMetadata?: readonly TaskMetadata[] | undefined;
 }
 export interface PersistenceResult {
   readonly stored: boolean;
@@ -111,5 +111,5 @@ export interface AuditEvent {
   readonly modelDecision: ModelSelectionDecision;
   readonly responseState: string;
   readonly persistenceState: PersistenceResult;
-  readonly proposedActions?: readonly unknown[];
+  readonly proposedActions?: readonly unknown[] | undefined;
 }

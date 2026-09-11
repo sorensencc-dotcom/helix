@@ -111,3 +111,5 @@ Branch `main`, six commits ahead of `origin/main`. Uncommitted implementation no
 - Added deterministic docs:audit tooling: local Markdown-link validation, Cathryn Lavery diagram triplet checks, Mermaid-details checks, and PNG-embed checks. Wired docs:audit into npm run check. Audit and full check pass: 14 Markdown files, 1 diagram, 14 test files, 46 tests.
 
 - Locked local composition contract in src/application/composition-contract.ts: request/session envelopes, retrieval, model decision, response, persistence, audit, and separate task metadata types. Remote adapter schemas remain external-authority gated.
+
+- Added ComposedSessionService using the locked local composition contract. It forwards typed retrieval, model, response, persistence, and append-only audit requests, rejects governed fail-closed retrieval, and returns DaemonResponse without mixing TaskMetadata.
