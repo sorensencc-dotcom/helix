@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object", "additionalProperties": false,
+  "required": ["contract", "identity"],
+  "properties": {
+    "contract": { "const": "helix.windows-principal.v1" },
+    "identity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sid", "upn", "groups"],
+      "properties": {
+        "sid": { "type": "string", "minLength": 1 },
+        "upn": { "type": "string", "minLength": 1 },
+        "groups": { "type": "array", "maxItems": 256, "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  }
+}
