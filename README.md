@@ -14,7 +14,7 @@ Helix does not own every capability in the system:
 - Windows IIS/HTTP.sys and the native bridge establish the authenticated operator identity.
 - Helix owns the session lifecycle, correlation identity, local persistence boundary, and orchestration between these authorities.
 
-## Architecture
+## Architecture`r`n`r`n![Helix architecture](docs/diagrams/helix-architecture.svg)`r`n`r`n[Open the standalone architecture diagram](docs/diagrams/helix-architecture.html)
 
 ```text
 Windows operator
