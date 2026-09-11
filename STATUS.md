@@ -105,3 +105,5 @@ Branch `main`, six commits ahead of `origin/main`. Uncommitted implementation no
 - Added injectable `TaskStore` foundation to `createDaemon`, including `SqliteTaskStore` and `MemoryTaskStore`; added restart-recovery coverage proving session/task metadata survives daemon recreation. Adapter and authentication protocols remain untouched.
 - Added fail-closed `WindowsPrincipalResolver`/`authenticateRequest` boundary with deterministic identity mapping tests. Runtime SSPI/Kerberos/NTLM resolver remains to be wired after transport implementation.
 - Added `IisHttpSysPrincipalResolver` host adapter boundary with injected IIS/HTTP.sys principal reader, strict Windows identity validation, and fail-closed missing-bridge behavior. Native SSPI extraction and live Windows hosting remain unverified. Full check passes with 13 files and 41 tests.
+
+- SessionService fixture coverage added: ordered retrieval, model selection, response, persistence, audit, and fail-closed retrieval. Build, lint, formatting, and 46 tests across 14 files pass. Live ICF/Sigil/WhichLLM, SSPI, signed MSIX, and clean-machine evidence remain blocked by environment prerequisites.
