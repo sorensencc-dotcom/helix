@@ -1,24 +1,52 @@
 import { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 
+export type StoredTaskState = "QUEUED" | "CANCELLED" | "COMPLETED" | "FAILED";
+
 export type StoredTask = {
   id: string;
-  state: "QUEUED" | "CANCELLED";
+  state: StoredTaskState;
   sessionId: string;
   correlationId: string;
+  response?: unknown;
+  metadata?: unknown;
 };
 
 const storedTaskSchema = z
   .object({
     id: z.string().min(1).max(128),
-    state: z.enum(["QUEUED", "CANCELLED"]),
+    state: z.enum(["QUEUED", "CANCELLED", "COMPLETED", "FAILED"]),
     sessionId: z.string().min(1).max(128),
     correlationId: z
       .string()
       .regex(/^corr_[a-z0-9-]+$/)
       .max(128),
+    response: z.unknown().optional(),
+    metadata: z.unknown().optional(),
   })
   .strict();
+
+type StoredTaskRow = {
+  id: string;
+  state: StoredTaskState;
+  session_id: string;
+  correlation_id: string;
+  response_json: string | null;
+  metadata_json: string | null;
+};
+
+function parseStoredTaskRow(row: StoredTaskRow): StoredTask {
+  return storedTaskSchema.parse({
+    id: row.id,
+    state: row.state,
+    sessionId: row.session_id,
+    correlationId: row.correlation_id,
+    response:
+      row.response_json === null ? undefined : JSON.parse(row.response_json),
+    metadata:
+      row.metadata_json === null ? undefined : JSON.parse(row.metadata_json),
+  });
+}
 
 export interface TaskStore {
   hasSession(id: string): boolean;
@@ -44,9 +72,25 @@ export class SqliteTaskStore implements TaskStore {
         id TEXT PRIMARY KEY,
         state TEXT NOT NULL,
         session_id TEXT NOT NULL,
-        correlation_id TEXT NOT NULL UNIQUE
+        correlation_id TEXT NOT NULL UNIQUE,
+        response_json TEXT,
+        metadata_json TEXT
       ) STRICT;
     `);
+    const columns = this.database
+      .prepare("PRAGMA table_info(helix_tasks)")
+      .all() as Array<{ name: string }>;
+    const columnNames = new Set(columns.map((column) => column.name));
+    if (!columnNames.has("response_json")) {
+      this.database.exec(
+        "ALTER TABLE helix_tasks ADD COLUMN response_json TEXT",
+      );
+    }
+    if (!columnNames.has("metadata_json")) {
+      this.database.exec(
+        "ALTER TABLE helix_tasks ADD COLUMN metadata_json TEXT",
+      );
+    }
   }
 
   public hasSession(id: string): boolean {
@@ -82,55 +126,35 @@ export class SqliteTaskStore implements TaskStore {
   public saveTask(task: StoredTask): void {
     this.database
       .prepare(
-        `INSERT OR REPLACE INTO helix_tasks (id, state, session_id, correlation_id) VALUES (?, ?, ?, ?)`,
+        `INSERT OR REPLACE INTO helix_tasks (id, state, session_id, correlation_id, response_json, metadata_json) VALUES (?, ?, ?, ?, ?, ?)`,
       )
-      .run(task.id, task.state, task.sessionId, task.correlationId);
+      .run(
+        task.id,
+        task.state,
+        task.sessionId,
+        task.correlationId,
+        task.response === undefined ? null : JSON.stringify(task.response),
+        task.metadata === undefined ? null : JSON.stringify(task.metadata),
+      );
   }
 
   public getTask(id: string): StoredTask | undefined {
     const row = this.database
       .prepare(
-        "SELECT id, state, session_id, correlation_id FROM helix_tasks WHERE id = ?",
+        "SELECT id, state, session_id, correlation_id, response_json, metadata_json FROM helix_tasks WHERE id = ?",
       )
-      .get(id) as
-      | {
-          id: string;
-          state: StoredTask["state"];
-          session_id: string;
-          correlation_id: string;
-        }
-      | undefined;
-    return (
-      row &&
-      storedTaskSchema.parse({
-        id: row.id,
-        state: row.state,
-        sessionId: row.session_id,
-        correlationId: row.correlation_id,
-      })
-    );
+      .get(id) as StoredTaskRow | undefined;
+    return row && parseStoredTaskRow(row);
   }
 
   public listTasks(): StoredTask[] {
     return (
       this.database
         .prepare(
-          "SELECT id, state, session_id, correlation_id FROM helix_tasks ORDER BY id",
+          "SELECT id, state, session_id, correlation_id, response_json, metadata_json FROM helix_tasks ORDER BY id",
         )
-        .all() as Array<{
-        id: string;
-        state: StoredTask["state"];
-        session_id: string;
-        correlation_id: string;
-      }>
-    ).map((row) =>
-      storedTaskSchema.parse({
-        id: row.id,
-        state: row.state,
-        sessionId: row.session_id,
-        correlationId: row.correlation_id,
-      }),
-    );
+        .all() as StoredTaskRow[]
+    ).map((row) => parseStoredTaskRow(row));
   }
 
   public close(): void {

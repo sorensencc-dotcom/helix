@@ -7,10 +7,22 @@ import { createHash, randomUUID } from "node:crypto";
 import { isLoopbackHost, type HelixConfig } from "../infrastructure/config.js";
 import {
   MemoryTaskStore,
+  SqliteTaskStore,
+  type StoredTask,
   type TaskStore,
 } from "../infrastructure/task-store.js";
 import { healthResponse } from "./health.js";
 import { writeSse } from "./sse.js";
+import { authenticateRequest } from "./auth.js";
+import type { WindowsPrincipalResolver } from "./auth.js";
+import type { ComposedSessionService } from "../application/composed-session-service.js";
+import type {
+  RequestEnvelope,
+  SessionContext,
+  TaskMetadata,
+  WindowsOperator,
+} from "../application/composition-contract.js";
+import type { SessionId } from "../domain/contracts.js";
 
 const maxBodyBytes = 64 * 1024;
 const maxSessionIdLength = 128;
@@ -19,6 +31,11 @@ type Task = {
   readonly state: "QUEUED" | "CANCELLED";
   readonly sessionId: string;
   readonly correlationId: string;
+};
+
+const anonymousOperator: WindowsOperator = {
+  sid: "S-1-0-0",
+  groups: [],
 };
 
 async function readJson(
@@ -62,12 +79,18 @@ function idempotencyFingerprint(
 
 export function createDaemon(
   config: HelixConfig,
-  options: { taskStore?: TaskStore } = {},
+  options: {
+    taskStore?: TaskStore;
+    sessionService?: ComposedSessionService;
+    resolvePrincipal?: WindowsPrincipalResolver;
+  } = {},
 ) {
   if (!isLoopbackHost(config.host)) {
     throw new Error("CONFIG_UNSAFE_BIND");
   }
   const taskStore = options.taskStore ?? new MemoryTaskStore();
+  const persistenceClass: SessionContext["persistenceClass"] =
+    taskStore instanceof SqliteTaskStore ? "encrypted-sqlite" : "ram-only";
   const idempotency = new Map<string, { fingerprint: string; body: unknown }>();
   return createServer((request: IncomingMessage, response: ServerResponse) => {
     if (request.method === "GET" && request.url === "/health") {
@@ -207,16 +230,110 @@ export function createDaemon(
             return;
           }
           const id = `task_${taskStore.listTasks().length + 1}`;
-          const result: Task = {
-            id,
-            state: "QUEUED",
-            sessionId: body.sessionId,
-            correlationId: `corr_${randomUUID()}`,
+          if (!options.sessionService) {
+            const result: Task = {
+              id,
+              state: "QUEUED",
+              sessionId: body.sessionId,
+              correlationId: `corr_${randomUUID()}`,
+            };
+            taskStore.saveTask(result);
+            if (typeof key === "string")
+              idempotency.set(key, { fingerprint, body: result });
+            sendJson(response, 202, result);
+            return;
+          }
+
+          const sessionId = body.sessionId as SessionId;
+          let operator = anonymousOperator;
+          if (options.resolvePrincipal) {
+            try {
+              const authContext = await authenticateRequest(
+                request,
+                options.resolvePrincipal,
+                {
+                  sessionId: body.sessionId,
+                  correlationId: `corr_${randomUUID()}`,
+                  createdAt: new Date().toISOString(),
+                  governed: false,
+                },
+              );
+              operator = authContext.identity.windows;
+            } catch (error) {
+              const code =
+                error instanceof Error && "code" in error
+                  ? String((error as { code: unknown }).code)
+                  : "WINDOWS_AUTH_REQUIRED";
+              sendJson(response, 401, { code, retryable: false });
+              return;
+            }
+          }
+          const session: SessionContext = {
+            sessionId,
+            operator,
+            governanceState: "ordinary",
+            persistenceClass,
+            icfAvailable: false,
+            clientType: "HTTP",
           };
-          taskStore.saveTask(result);
-          if (typeof key === "string")
-            idempotency.set(key, { fingerprint, body: result });
-          sendJson(response, 202, result);
+          const envelope: RequestEnvelope = {
+            id,
+            operator,
+            sessionId,
+            payload: { instruction: body.instruction },
+            scope: "ordinary",
+            timestamp: new Date().toISOString(),
+          };
+          try {
+            const daemonResponse = await options.sessionService.respond(
+              envelope,
+              session,
+            );
+            const metadata: TaskMetadata = {
+              taskId: id,
+              sessionId,
+              operator,
+              proposedAction: daemonResponse.proposedActions?.[0],
+              approvalState: "not-required",
+              receiptState:
+                daemonResponse.persistenceMode === "ram-only"
+                  ? "unpersisted"
+                  : "persisted",
+            };
+            const result: StoredTask = {
+              id,
+              state: "COMPLETED",
+              sessionId: body.sessionId,
+              correlationId: `corr_${randomUUID()}`,
+              response: daemonResponse,
+              metadata,
+            };
+            taskStore.saveTask(result);
+            if (typeof key === "string")
+              idempotency.set(key, { fingerprint, body: result });
+            sendJson(response, 202, result);
+          } catch {
+            const metadata: TaskMetadata = {
+              taskId: id,
+              sessionId,
+              operator,
+              proposedAction: undefined,
+              approvalState: "denied",
+              receiptState: "unpersisted",
+            };
+            const failed: StoredTask = {
+              id,
+              state: "FAILED",
+              sessionId: body.sessionId,
+              correlationId: `corr_${randomUUID()}`,
+              metadata,
+            };
+            taskStore.saveTask(failed);
+            sendJson(response, 502, {
+              code: "TASK_EXECUTION_FAILED",
+              retryable: false,
+            });
+          }
           return;
         }
         const closeSession =
