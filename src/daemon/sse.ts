@@ -11,11 +11,16 @@ export function createSseBuffer(limit = 256) {
     const item = { event, data, id: nextId++ };
     events.push(item);
     if (events.length > limit) events.shift();
-    for (const response of subscribers) writeSse(response, item.event, item.data, item.id);
+    for (const response of subscribers)
+      writeSse(response, item.event, item.data, item.id);
     return item;
   };
-  const replay = (lastEventId: number) => events.filter((item) => item.id > lastEventId);
-  const subscribe = (response: ServerResponse) => { subscribers.add(response); response.on("close", () => subscribers.delete(response)); };
+  const replay = (lastEventId: number) =>
+    events.filter((item) => item.id > lastEventId);
+  const subscribe = (response: ServerResponse) => {
+    subscribers.add(response);
+    response.on("close", () => subscribers.delete(response));
+  };
   return { publish, replay, subscribe };
 }
 

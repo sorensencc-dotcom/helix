@@ -95,7 +95,8 @@ export function createDaemon(
   const stream = createSseBuffer();
   stream.publish("metadata", { version: config.version });
   stream.publish("done", { status: "COMPLETED" });
-  const publishTask = (task: StoredTask | Task) => stream.publish("metadata", { task });
+  const publishTask = (task: StoredTask | Task) =>
+    stream.publish("metadata", { task });
   return createServer((request: IncomingMessage, response: ServerResponse) => {
     if (request.method === "GET" && request.url === "/health") {
       sendJson(response, 200, healthResponse(config.version));
@@ -128,8 +129,12 @@ export function createDaemon(
         connection: "keep-alive",
       });
       const lastEventId = Number(request.headers["last-event-id"] ?? 0);
-      for (const item of stream.replay(Number.isFinite(lastEventId) ? lastEventId : 0)) writeSse(response, item.event, item.data, item.id);
-      if (request.url !== "/v1/stream?follow=1") response.end(); else stream.subscribe(response);
+      for (const item of stream.replay(
+        Number.isFinite(lastEventId) ? lastEventId : 0,
+      ))
+        writeSse(response, item.event, item.data, item.id);
+      if (request.url !== "/v1/stream?follow=1") response.end();
+      else stream.subscribe(response);
       return;
     }
     void (async () => {
