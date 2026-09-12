@@ -15,6 +15,7 @@ import {
   whichLlmResponse,
 } from "./contracts.js";
 import type {
+  AdapterTransport,
   HttpAdapterTransport,
   UnavailableAdapterTransport,
 } from "./transport.js";
@@ -25,9 +26,10 @@ type IdentityProvider = (
 
 export class IcfRetrievalAdapter {
   public constructor(
-    private readonly transport:
-      | HttpAdapterTransport<Record<string, unknown>, unknown>
-      | UnavailableAdapterTransport<Record<string, unknown>, unknown>,
+    private readonly transport: AdapterTransport<
+      Record<string, unknown>,
+      unknown
+    >,
     private readonly identity: IdentityProvider,
   ) {}
 
@@ -65,9 +67,10 @@ export class IcfRetrievalAdapter {
 
 export class WhichLlmSelectionAdapter {
   public constructor(
-    private readonly transport:
-      | HttpAdapterTransport<Record<string, unknown>, unknown>
-      | UnavailableAdapterTransport<Record<string, unknown>, unknown>,
+    private readonly transport: AdapterTransport<
+      Record<string, unknown>,
+      unknown
+    >,
     private readonly identity: IdentityProvider,
   ) {}
 

@@ -87,4 +87,62 @@ describe("local authority adapters", () => {
       }),
     ).rejects.toThrow("MODEL_EXECUTION_UNAVAILABLE");
   });
+
+  it("resolves valid ICF success payloads and attaches lineage ID in governed scope", async () => {
+    const mockTransport = {
+      send: async () => ({
+        contract: "helix-adapter.v1",
+        status: "success",
+        sources: [
+          "upstream:google/sam@674af93",
+          "upstream:trailhq/Graft@65c2966",
+        ],
+        governed: true,
+        lineageId: "lin_drift_20260912_063500",
+      }),
+    };
+    const adapter = new IcfRetrievalAdapter(mockTransport, () => ({
+      ...identity,
+      helixSession: { ...identity.helixSession, governed: true },
+    }));
+
+    const result = await adapter.retrieve({
+      session: {
+        ...session,
+        governanceState: "governed",
+        persistenceClass: "ram-only",
+      },
+      payload: { query: "upstream_drift_evaluation" },
+      constraints: { scope: "governed" },
+    });
+
+    expect(result.state).toBe("success");
+    expect(result.sourcesUsed).toEqual([
+      "upstream:google/sam@674af93",
+      "upstream:trailhq/Graft@65c2966",
+    ]);
+    expect(result.lineageRecord).toBe("lin_drift_20260912_063500");
+  });
+
+  it("selects provider and model when WhichLLM returns success", async () => {
+    const mockTransport = {
+      send: async () => ({
+        contract: "helix-adapter.v1",
+        status: "success",
+        provider: "anthropic",
+        model: "claude-3-5-sonnet",
+        cloudEnabled: true,
+      }),
+    };
+    const adapter = new WhichLlmSelectionAdapter(mockTransport, () => identity);
+
+    const result = await adapter.select({
+      session,
+      retrieval: { contextPacket: null, sourcesUsed: [], state: "success" },
+    });
+
+    expect(result.selectedModel).toBe("claude-3-5-sonnet");
+    expect(result.overrideStatus).toBe("auto");
+    expect(result.availableModels).toContain("claude-3-5-sonnet");
+  });
 });
