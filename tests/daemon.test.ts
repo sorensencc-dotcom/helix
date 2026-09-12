@@ -29,7 +29,7 @@ describe("daemon routes", () => {
 
     const index = await fetch(`${url}/index.html`);
     expect(index.status).toBe(200);
-    expect(await index.text()).toContain("new EventSource");
+    expect(await index.text()).toContain("fetch('/v1/stream?follow=1'");
 
     const styles = await fetch(`${url}/styles/cast-iron-charlie.css`);
     expect(styles.status).toBe(200);
@@ -190,6 +190,46 @@ describe("daemon routes", () => {
     expect(await closed.json()).toEqual({
       sessionId: "session_http",
       status: "CLOSED",
+    });
+  });
+
+  it("retrieves task history scoped to a session", async () => {
+    for (const sessionId of ["history_one", "history_two"]) {
+      const response = await fetch(`${url}/v1/sessions`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      });
+      expect(response.status).toBe(201);
+    }
+    const createTask = async (sessionId: string, instruction: string) =>
+      fetch(`${url}/v1/tasks`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sessionId, instruction }),
+      });
+    const first = await createTask("history_one", "first");
+    const second = await createTask("history_two", "second");
+    const third = await createTask("history_one", "third");
+    expect(first.status).toBe(202);
+    expect(second.status).toBe(202);
+    expect(third.status).toBe(202);
+    const firstTask = await first.json();
+    const thirdTask = await third.json();
+
+    const history = await fetch(`${url}/v1/sessions/history_one/tasks`);
+    expect(history.status).toBe(200);
+    expect(await history.json()).toEqual({
+      sessionId: "history_one",
+      tasks: [firstTask, thirdTask],
+    });
+  });
+
+  it("rejects task history requests for unknown sessions", async () => {
+    const response = await fetch(`${url}/v1/sessions/missing/tasks`);
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({
+      code: "SESSION_NOT_FOUND",
     });
   });
 

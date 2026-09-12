@@ -21,7 +21,7 @@ describe("browser operator console boundary", () => {
     );
     expect(html).toContain("/v1/tasks/${encodeURIComponent(task.id)}");
     expect(html).toContain("/v1/tasks/${encodeURIComponent(id)}/cancel");
-    expect(html).toContain("new EventSource('/v1/stream?follow=1')");
+    expect(html).toContain("fetch('/v1/stream?follow=1'");
     expect(html).toContain('id="session-list"');
     expect(html).toContain('aria-label="Cancel task ${task.id}"');
   });

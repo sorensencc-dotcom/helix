@@ -157,6 +157,35 @@ export function createDaemon(
       sendJson(response, 200, { sessions: taskStore.listSessionIds() });
       return;
     }
+    const sessionTasks =
+      request.method === "GET" &&
+      request.url?.match(/^\/v1\/sessions\/([^/]+)\/tasks$/);
+    if (sessionTasks) {
+      let sessionId = "";
+      try {
+        sessionId = decodeURIComponent(sessionTasks[1] ?? "");
+      } catch {
+        sendJson(response, 400, {
+          code: "INVALID_SESSION_ID",
+          retryable: false,
+        });
+        return;
+      }
+      if (!sessionId || !taskStore.hasSession(sessionId)) {
+        sendJson(response, 404, {
+          code: "SESSION_NOT_FOUND",
+          retryable: false,
+        });
+        return;
+      }
+      sendJson(response, 200, {
+        sessionId,
+        tasks: taskStore
+          .listTasks()
+          .filter((task) => task.sessionId === sessionId),
+      });
+      return;
+    }
     if (request.method === "GET" && request.url?.startsWith("/v1/stream")) {
       response.writeHead(200, {
         "content-type": "text/event-stream",
