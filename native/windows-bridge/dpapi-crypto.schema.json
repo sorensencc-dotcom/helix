@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "helix.dpapi-crypto.v1 request/response envelopes for POST /v1/crypto/encrypt, POST /v1/crypto/decrypt, DELETE /v1/crypto/delete",
+  "oneOf": [
+    {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract", "sessionId", "plaintext"],
+      "properties": {
+        "contract": { "const": "helix.dpapi-crypto.v1" },
+        "sessionId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "plaintext": { "type": "string", "contentEncoding": "base64", "maxLength": 1398200 }
+      }
+    },
+    {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract", "sessionId", "ciphertext"],
+      "properties": {
+        "contract": { "const": "helix.dpapi-crypto.v1" },
+        "sessionId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ciphertext": { "type": "string", "contentEncoding": "base64", "maxLength": 1398200 }
+      }
+    },
+    {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract", "sessionId"],
+      "properties": {
+        "contract": { "const": "helix.dpapi-crypto.v1" },
+        "sessionId": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract", "operation", "ciphertext"],
+      "properties": {
+        "contract": { "const": "helix.dpapi-crypto.v1" },
+        "operation": { "const": "encrypt" },
+        "ciphertext": { "type": "string", "contentEncoding": "base64" }
+      }
+    },
+    {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract", "operation", "plaintext"],
+      "properties": {
+        "contract": { "const": "helix.dpapi-crypto.v1" },
+        "operation": { "const": "decrypt" },
+        "plaintext": { "type": "string", "contentEncoding": "base64" }
+      }
+    },
+    {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract", "operation", "deleted"],
+      "properties": {
+        "contract": { "const": "helix.dpapi-crypto.v1" },
+        "operation": { "const": "delete" },
+        "deleted": { "const": true }
+      }
+    },
+    {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract", "error"],
+      "properties": {
+        "contract": { "const": "helix.dpapi-crypto.v1" },
+        "error": {
+          "enum": ["ACCESS_DENIED", "REQUEST_INVALID", "CRYPTO_FAILED"]
+        }
+      }
+    }
+  ]
+}
