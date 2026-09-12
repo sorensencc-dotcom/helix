@@ -113,6 +113,10 @@ export function createDaemon(
       });
       return;
     }
+    if (request.method === "GET" && request.url === "/v1/sessions") {
+      sendJson(response, 200, { sessions: taskStore.listSessionIds() });
+      return;
+    }
     if (request.method === "GET" && request.url === "/v1/stream") {
       response.writeHead(200, {
         "content-type": "text/event-stream",
