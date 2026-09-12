@@ -18,11 +18,7 @@ import { HttpAdapterTransport } from "../src/adapters/transport.js";
 import type { SessionContext } from "../src/application/composition-contract.js";
 
 type FailureScenario =
-  | "timeout"
-  | "unavailable"
-  | "malformed"
-  | "denied"
-  | "version-mismatch";
+  "timeout" | "unavailable" | "malformed" | "denied" | "version-mismatch";
 
 const identity = createIdentityEnvelope(
   { sid: "S-1-fixture-matrix", upn: "operator@example.test", groups: [] },

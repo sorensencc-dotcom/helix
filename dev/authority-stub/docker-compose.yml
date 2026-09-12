@@ -1,0 +1,8 @@
+services:
+  authority-stub:
+    build: .
+    container_name: helix-authority-stub
+    ports:
+      - "4180:4180"
+    environment:
+      PORT: "4180"
