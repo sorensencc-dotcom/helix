@@ -21,10 +21,10 @@ describe("secure records", () => {
     expect(checksum("export")).not.toBe(checksum("changed"));
   });
 
-  it("persists encrypted ordinary responses and reloads them", () => {
+  it("persists encrypted ordinary responses and reloads them", async () => {
     const directory = mkdtempSync(join(tmpdir(), "helix-session-"));
     const store = new SqliteSessionStore(join(directory, "sessions.sqlite"), {
-      getKey: () => new Uint8Array(32).fill(9),
+      getKey: async () => new Uint8Array(32).fill(9),
     });
     const response = {
       correlationId:
@@ -33,15 +33,15 @@ describe("secure records", () => {
       text: "ordinary response",
       context: { sources: ["local"], governed: false },
     } satisfies AssistantResponse;
-    store.save(response);
-    expect(store.list(response.sessionId)).toEqual([response]);
+    await store.save(response);
+    await expect(store.list(response.sessionId)).resolves.toEqual([response]);
     store.close();
   });
 
-  it("rejects governed and context-free responses before persistence", () => {
+  it("rejects governed and context-free responses before persistence", async () => {
     const directory = mkdtempSync(join(tmpdir(), "helix-session-"));
     const store = new SqliteSessionStore(join(directory, "sessions.sqlite"), {
-      getKey: () => new Uint8Array(32).fill(9),
+      getKey: async () => new Uint8Array(32).fill(9),
     });
     const response = {
       correlationId:
@@ -54,18 +54,18 @@ describe("secure records", () => {
         lineageId: "lineage_fixture",
       },
     } satisfies AssistantResponse;
-    expect(() => store.save(response)).toThrow(
+    await expect(store.save(response)).rejects.toThrow(
       "governed responses cannot be persisted",
     );
-    expect(store.list(response.sessionId)).toEqual([]);
+    await expect(store.list(response.sessionId)).resolves.toEqual([]);
     const { context: _context, ...contextFree } = response;
-    expect(() =>
+    await expect(
       store.save({
         ...contextFree,
         correlationId:
           "corr_fixture-no-context" as AssistantResponse["correlationId"],
       }),
-    ).toThrow("governed responses cannot be persisted");
+    ).rejects.toThrow("governed responses cannot be persisted");
     store.close();
   });
 });

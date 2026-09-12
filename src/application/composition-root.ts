@@ -52,7 +52,7 @@ class SessionPersistence {
       this.ram.set(request.session.sessionId, request.response);
       return { stored: false, location: "ram-only" };
     }
-    this.sqlite.save({
+    await this.sqlite.save({
       correlationId: request.response.correlationId,
       sessionId: request.session.sessionId,
       text:

@@ -18,7 +18,7 @@ describe("composition root", () => {
 
   it("constructs unavailable authorities without making network calls", () => {
     const composition = createSessionService(config, {
-      getKey: () => new Uint8Array(32),
+      getKey: async () => new Uint8Array(32),
     });
     expect(composition.service).toBeDefined();
     composition.close();

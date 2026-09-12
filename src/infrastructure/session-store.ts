@@ -7,7 +7,7 @@ import {
 } from "./secure-store.js";
 
 export interface SessionKeyProvider {
-  getKey(): Uint8Array;
+  getKey(): Promise<Uint8Array>;
 }
 
 export class SqliteSessionStore {
@@ -28,13 +28,13 @@ export class SqliteSessionStore {
     `);
   }
 
-  public save(response: AssistantResponse): void {
+  public async save(response: AssistantResponse): Promise<void> {
     if (response.context?.governed !== false) {
       throw new Error("governed responses cannot be persisted");
     }
     const record = encryptRecord(
       JSON.stringify(response),
-      this.keyProvider.getKey(),
+      await this.keyProvider.getKey(),
     );
     this.database
       .prepare(
@@ -50,19 +50,17 @@ export class SqliteSessionStore {
       );
   }
 
-  public list(sessionId: SessionId): AssistantResponse[] {
+  public async list(sessionId: SessionId): Promise<AssistantResponse[]> {
     const rows = this.database
       .prepare(
         "SELECT record_json FROM ordinary_sessions WHERE session_id = ? ORDER BY created_at",
       )
       .all(sessionId) as Array<{ record_json: string }>;
+    const key = await this.keyProvider.getKey();
     return rows.map(
       (row) =>
         JSON.parse(
-          decryptRecord(
-            JSON.parse(row.record_json) as EncryptedRecord,
-            this.keyProvider.getKey(),
-          ),
+          decryptRecord(JSON.parse(row.record_json) as EncryptedRecord, key),
         ) as AssistantResponse,
     );
   }
