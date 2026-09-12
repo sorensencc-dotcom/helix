@@ -2,6 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
+import type { SessionCryptoProvider } from "../infrastructure/session-store.js";
 
 export interface NativeDpapiBridge {
   protect(value: Uint8Array, scope: "user" | "machine"): Promise<Uint8Array>;
@@ -34,6 +35,11 @@ export interface ResponseLike {
   json(): Promise<unknown>;
 }
 
+export interface RequestInitLike {
+  readonly method?: "GET" | "POST" | "DELETE";
+  readonly body?: unknown;
+}
+
 export class CurlNegotiateFetch {
   public constructor(
     private readonly executable = "curl.exe",
@@ -41,12 +47,15 @@ export class CurlNegotiateFetch {
     private readonly maxOutputBytes = 1_048_576,
   ) {}
 
-  public async fetch(url: string): Promise<ResponseLike> {
+  public async fetch(
+    url: string,
+    init?: RequestInitLike,
+  ): Promise<ResponseLike> {
     if (process.platform !== "win32") throw new Error("WINDOWS_ONLY");
     const directory = await mkdtemp(join(tmpdir(), "helix-negotiate-"));
     const cookieJar = join(directory, "cookies.txt");
     try {
-      const result = await this.run(url, cookieJar);
+      const result = await this.run(url, cookieJar, init);
       return {
         ok: result.status >= 200 && result.status < 300,
         async json() {
@@ -61,26 +70,35 @@ export class CurlNegotiateFetch {
   private run(
     url: string,
     cookieJar: string,
+    init?: RequestInitLike,
   ): Promise<{ status: number; body: string }> {
     return new Promise((resolve, reject) => {
-      const child = spawn(
-        this.executable,
-        [
-          "--silent",
-          "--show-error",
-          "--negotiate",
-          "-u",
-          ":",
-          "--cookie",
-          cookieJar,
-          "--cookie-jar",
-          cookieJar,
-          "--write-out",
-          "\n%{http_code}",
-          url,
-        ],
-        { windowsHide: true },
-      );
+      const args = [
+        "--silent",
+        "--show-error",
+        "--negotiate",
+        "-u",
+        ":",
+        "--cookie",
+        cookieJar,
+        "--cookie-jar",
+        cookieJar,
+        "--write-out",
+        "\n%{http_code}",
+      ];
+      if (init?.method && init.method !== "GET") {
+        args.push("-X", init.method);
+      }
+      if (init?.body !== undefined) {
+        args.push(
+          "-H",
+          "Content-Type: application/json",
+          "--data",
+          JSON.stringify(init.body),
+        );
+      }
+      args.push(url);
+      const child = spawn(this.executable, args, { windowsHide: true });
       let output = "";
       const timer = setTimeout(() => {
         child.kill();
@@ -108,5 +126,84 @@ export class CurlNegotiateFetch {
         });
       });
     });
+  }
+}
+
+const DpapiCryptoContract = "helix.dpapi-crypto.v1";
+
+export type AuthenticatedRequestFetch = (
+  url: string,
+  init?: RequestInitLike,
+) => Promise<ResponseLike>;
+
+/**
+ * Native-bridge-backed SessionCryptoProvider: delegates to the
+ * helix.dpapi-crypto.v1 endpoints. No key material is ever held here -- the
+ * bridge protects/unprotects under DataProtectionScope.CurrentUser, keyed to
+ * the sessionId as DPAPI entropy.
+ */
+export class WindowsBridgeCryptoProvider implements SessionCryptoProvider {
+  public constructor(
+    private readonly bridgeUrl: string,
+    private readonly authenticatedFetch: AuthenticatedRequestFetch,
+  ) {}
+
+  public async encrypt(sessionId: string, plaintext: string): Promise<string> {
+    const body = await this.call("encrypt", {
+      contract: DpapiCryptoContract,
+      sessionId,
+      plaintext: Buffer.from(plaintext, "utf8").toString("base64"),
+    });
+    if (typeof body.ciphertext !== "string") {
+      throw new Error("DPAPI_BRIDGE_RESPONSE_INVALID");
+    }
+    return body.ciphertext;
+  }
+
+  public async decrypt(sessionId: string, ciphertext: string): Promise<string> {
+    const body = await this.call("decrypt", {
+      contract: DpapiCryptoContract,
+      sessionId,
+      ciphertext,
+    });
+    if (typeof body.plaintext !== "string") {
+      throw new Error("DPAPI_BRIDGE_RESPONSE_INVALID");
+    }
+    return Buffer.from(body.plaintext, "base64").toString("utf8");
+  }
+
+  private async call(
+    path: "encrypt" | "decrypt",
+    requestBody: unknown,
+  ): Promise<Record<string, unknown>> {
+    let response: ResponseLike;
+    try {
+      response = await this.authenticatedFetch(
+        `${this.bridgeUrl}/v1/crypto/${path}`,
+        { method: "POST", body: requestBody },
+      );
+    } catch {
+      throw new Error("DPAPI_BRIDGE_UNAVAILABLE");
+    }
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      throw new Error("DPAPI_BRIDGE_RESPONSE_INVALID");
+    }
+    if (
+      typeof body !== "object" ||
+      body === null ||
+      (body as { contract?: unknown }).contract !== DpapiCryptoContract
+    ) {
+      throw new Error("DPAPI_BRIDGE_RESPONSE_INVALID");
+    }
+    if (!response.ok) {
+      const code = (body as { error?: unknown }).error;
+      throw new Error(
+        `DPAPI_BRIDGE_${typeof code === "string" ? code : "REQUEST_FAILED"}`,
+      );
+    }
+    return body as Record<string, unknown>;
   }
 }

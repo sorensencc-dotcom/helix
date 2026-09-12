@@ -10,12 +10,33 @@ export interface SessionKeyProvider {
   getKey(): Promise<Uint8Array>;
 }
 
+/**
+ * Native-bridge-backed encryption: the bridge (DPAPI) is the sole holder of
+ * key material. Helix never sees a key, only opaque ciphertext scoped to a
+ * sessionId.
+ */
+export interface SessionCryptoProvider {
+  encrypt(sessionId: string, plaintext: string): Promise<string>;
+  decrypt(sessionId: string, ciphertext: string): Promise<string>;
+}
+
+export type SessionEncryption = SessionKeyProvider | SessionCryptoProvider;
+
+function isCryptoProvider(
+  encryption: SessionEncryption,
+): encryption is SessionCryptoProvider {
+  return typeof (encryption as SessionCryptoProvider).encrypt === "function";
+}
+
+type StoredEnvelope =
+  { version: 1; record: EncryptedRecord } | { version: 2; ciphertext: string };
+
 export class SqliteSessionStore {
   private readonly database: DatabaseSync;
 
   public constructor(
     databasePath: string,
-    private readonly keyProvider: SessionKeyProvider,
+    private readonly encryption: SessionEncryption,
   ) {
     this.database = new DatabaseSync(databasePath);
     this.database.exec(`
@@ -32,10 +53,19 @@ export class SqliteSessionStore {
     if (response.context?.governed !== false) {
       throw new Error("governed responses cannot be persisted");
     }
-    const record = encryptRecord(
-      JSON.stringify(response),
-      await this.keyProvider.getKey(),
-    );
+    const plaintext = JSON.stringify(response);
+    const envelope: StoredEnvelope = isCryptoProvider(this.encryption)
+      ? {
+          version: 2,
+          ciphertext: await this.encryption.encrypt(
+            response.sessionId,
+            plaintext,
+          ),
+        }
+      : {
+          version: 1,
+          record: encryptRecord(plaintext, await this.encryption.getKey()),
+        };
     this.database
       .prepare(
         `INSERT OR REPLACE INTO ordinary_sessions
@@ -45,7 +75,7 @@ export class SqliteSessionStore {
       .run(
         response.sessionId,
         response.correlationId,
-        JSON.stringify(record),
+        JSON.stringify(envelope),
         new Date().toISOString(),
       );
   }
@@ -56,13 +86,32 @@ export class SqliteSessionStore {
         "SELECT record_json FROM ordinary_sessions WHERE session_id = ? ORDER BY created_at",
       )
       .all(sessionId) as Array<{ record_json: string }>;
-    const key = await this.keyProvider.getKey();
-    return rows.map(
-      (row) =>
+    const results: AssistantResponse[] = [];
+    for (const row of rows) {
+      const envelope = JSON.parse(row.record_json) as StoredEnvelope;
+      results.push(
         JSON.parse(
-          decryptRecord(JSON.parse(row.record_json) as EncryptedRecord, key),
+          await this.decodeEnvelope(sessionId, envelope),
         ) as AssistantResponse,
-    );
+      );
+    }
+    return results;
+  }
+
+  private async decodeEnvelope(
+    sessionId: string,
+    envelope: StoredEnvelope,
+  ): Promise<string> {
+    if (envelope.version === 2) {
+      if (!isCryptoProvider(this.encryption)) {
+        throw new Error("NATIVE_RECORD_REQUIRES_CRYPTO_PROVIDER");
+      }
+      return this.encryption.decrypt(sessionId, envelope.ciphertext);
+    }
+    if (isCryptoProvider(this.encryption)) {
+      throw new Error("LEGACY_RECORD_REQUIRES_KEY_PROVIDER");
+    }
+    return decryptRecord(envelope.record, await this.encryption.getKey());
   }
 
   public close(): void {
