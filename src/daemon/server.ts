@@ -48,6 +48,46 @@ const contentTypes: Record<string, string> = {
   ".js": "text/javascript; charset=utf-8",
 };
 
+type ReadinessState = "unknown" | "unavailable" | "configured" | "ready";
+
+type Readiness = {
+  readonly state: ReadinessState;
+  readonly reason: string;
+};
+
+function configuredReadiness(configured: boolean, name: string): Readiness {
+  return configured
+    ? {
+        state: "configured",
+        reason: `${name} configuration is present; live readiness is not probed by the daemon status route`,
+      }
+    : {
+        state: "unavailable",
+        reason: `${name} configuration is not present`,
+      };
+}
+
+function persistenceReadiness(
+  taskStore: TaskStore,
+  persistenceClass: SessionContext["persistenceClass"],
+): Readiness & { readonly kind: SessionContext["persistenceClass"] } {
+  try {
+    taskStore.listSessionIds();
+    taskStore.listTasks();
+    return {
+      state: "ready",
+      kind: persistenceClass,
+      reason: `${persistenceClass} task store is operational`,
+    };
+  } catch {
+    return {
+      state: "unavailable",
+      kind: persistenceClass,
+      reason: `${persistenceClass} task store could not be read`,
+    };
+  }
+}
+
 function serveWebAsset(
   request: IncomingMessage,
   response: ServerResponse,
@@ -138,11 +178,35 @@ export function createDaemon(
       return;
     }
     if (request.method === "GET" && request.url === "/v1/status") {
+      const persistence = persistenceReadiness(taskStore, persistenceClass);
       sendJson(response, 200, {
         status: "READY",
+        contract: "helix.status.v1",
         version: config.version,
         sessions: taskStore.listSessionIds().length,
         tasks: taskStore.listTasks().length,
+        readiness: {
+          windowsBridge: configuredReadiness(
+            Boolean(config.windowsBridgeUrl && config.windowsBridgeCommand),
+            "Windows bridge",
+          ),
+          icf: configuredReadiness(Boolean(config.icfResolveUrl), "ICF"),
+          sigil: configuredReadiness(Boolean(config.sigilExecuteUrl), "Sigil"),
+          whichLlm: configuredReadiness(
+            Boolean(config.whichLlmUrl),
+            "WhichLLM",
+          ),
+          persistence,
+          local: {
+            state: "ready" as const,
+            mode: "local" as const,
+            reason: "daemon is bound to a loopback host",
+          },
+          fixture: {
+            state: "unknown" as const,
+            reason: "fixture mode is not declared by daemon configuration",
+          },
+        },
       });
       return;
     }

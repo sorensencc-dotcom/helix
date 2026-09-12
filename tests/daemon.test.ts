@@ -49,6 +49,60 @@ describe("daemon routes", () => {
     ).toThrow("CONFIG_UNSAFE_BIND");
   });
 
+  it("exposes versioned, fail-closed readiness states", async () => {
+    const response = await fetch(`${url}/v1/status`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      status: "READY",
+      contract: "helix.status.v1",
+      version: "0.1.0",
+      readiness: {
+        windowsBridge: { state: "configured" },
+        icf: { state: "unavailable" },
+        sigil: { state: "unavailable" },
+        whichLlm: { state: "unavailable" },
+        persistence: { state: "ready", kind: "ram-only" },
+        local: { state: "ready", mode: "local" },
+        fixture: { state: "unknown" },
+      },
+    });
+  });
+
+  it("reports configured authority endpoints without claiming live readiness", async () => {
+    const configured = createDaemon({
+      host: "127.0.0.1",
+      port: 0,
+      version: "0.1.0",
+      taskDatabasePath: ":memory:",
+      windowsBridgeUrl: "http://127.0.0.1:8792",
+      windowsBridgeCommand: "true",
+      icfResolveUrl: "https://icf.example.test/resolve",
+      sigilExecuteUrl: "https://sigil.example.test/execute",
+      whichLlmUrl: "https://whichllm.example.test/route",
+    });
+    const configuredUrl = await new Promise<string>((resolve) => {
+      configured.listen(0, "127.0.0.1", () => {
+        const address = configured.address() as { port: number };
+        resolve(`http://127.0.0.1:${address.port}`);
+      });
+    });
+    try {
+      const response = await fetch(`${configuredUrl}/v1/status`);
+      const body = await response.json();
+      expect(body.readiness).toMatchObject({
+        windowsBridge: { state: "configured" },
+        icf: { state: "configured" },
+        sigil: { state: "configured" },
+        whichLlm: { state: "configured" },
+      });
+      for (const authority of ["windowsBridge", "icf", "sigil", "whichLlm"]) {
+        expect(body.readiness[authority].state).not.toBe("ready");
+      }
+    } finally {
+      configured.close();
+    }
+  });
+
   it("rejects invalid JSON shapes and idempotency keys", async () => {
     const invalidJson = await fetch(`${url}/v1/sessions`, {
       method: "POST",

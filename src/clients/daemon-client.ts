@@ -1,9 +1,11 @@
 export interface DaemonClient {
   status(): Promise<{
     status: string;
+    contract: "helix.status.v1";
     version: string;
     sessions: number;
     tasks: number;
+    readiness: Record<string, { state: string; reason: string }>;
   }>;
   createSession(
     sessionId?: string,
@@ -104,9 +106,13 @@ import { z } from "zod";
 const statusSchema = z
   .object({
     status: z.string(),
+    contract: z.literal("helix.status.v1"),
     version: z.string(),
     sessions: z.number().int().nonnegative(),
     tasks: z.number().int().nonnegative(),
+    readiness: z.record(
+      z.object({ state: z.string(), reason: z.string() }).passthrough(),
+    ),
   })
   .strict();
 const sessionSchema = z
