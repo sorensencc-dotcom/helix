@@ -22,7 +22,9 @@ describe("daemon client", () => {
   it("uses the same HTTP contracts as the browser flow", async () => {
     expect((await client.status()).status).toBe("READY");
     const session = await client.createSession("client_session");
-    expect(await client.listSessions()).toEqual({ sessions: ["client_session"] });
+    expect(await client.listSessions()).toEqual({
+      sessions: ["client_session"],
+    });
     const task = await client.createTask(
       session.sessionId,
       "read the governed status",
@@ -39,11 +41,15 @@ describe("daemon client", () => {
     await expect(client.closeSession(session.sessionId)).rejects.toThrow(
       "SESSION_HAS_ACTIVE_TASKS",
     );
-    expect(await client.cancelTask(task.id)).toMatchObject({ state: "CANCELLED" });
+    expect(await client.cancelTask(task.id)).toMatchObject({
+      state: "CANCELLED",
+    });
   });
 
   it("lists sessions and exposes the canonical stream endpoint", async () => {
-    await expect(client.listSessions()).resolves.toMatchObject({ sessions: expect.any(Array) });
+    await expect(client.listSessions()).resolves.toMatchObject({
+      sessions: expect.any(Array),
+    });
     const stream = await client.openStream();
     expect(stream.events.length).toBeGreaterThan(0);
     expect(stream.events[0]).toMatchObject({ event: "metadata", id: 1 });

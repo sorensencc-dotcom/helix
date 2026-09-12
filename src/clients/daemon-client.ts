@@ -54,7 +54,8 @@ async function request<T>(
 export function createDaemonClient(baseUrl: string): DaemonClient {
   return {
     status: () => request(baseUrl, "/v1/status", undefined, statusSchema),
-    listSessions: () => request(baseUrl, "/v1/sessions", undefined, sessionsSchema),
+    listSessions: () =>
+      request(baseUrl, "/v1/sessions", undefined, sessionsSchema),
     createSession: (sessionId) =>
       request(
         baseUrl,
@@ -88,7 +89,13 @@ export function createDaemonClient(baseUrl: string): DaemonClient {
         taskSchema,
       ),
     getTask: (id) => request(baseUrl, `/v1/tasks/${id}`, undefined, taskSchema),
-    cancelTask: (id) => request(baseUrl, `/v1/tasks/${id}/cancel`, { method: "POST" }, taskSchema),
+    cancelTask: (id) =>
+      request(
+        baseUrl,
+        `/v1/tasks/${id}/cancel`,
+        { method: "POST" },
+        taskSchema,
+      ),
     openStream: (lastEventId) => readStream(baseUrl, lastEventId),
   };
 }
@@ -108,7 +115,9 @@ const sessionSchema = z
     status: z.string(),
   })
   .strict();
-const sessionsSchema = z.object({ sessions: z.array(z.string().min(1)) }).strict();
+const sessionsSchema = z
+  .object({ sessions: z.array(z.string().min(1)) })
+  .strict();
 const taskSchema = z
   .object({
     id: z.string().min(1),
@@ -126,12 +135,22 @@ async function readStream(baseUrl: string, lastEventId = 0) {
   });
   if (!response.ok) throw new Error(`HTTP_${response.status}`);
   const text = await response.text();
-  const events = text.trim().split("\n\n").filter(Boolean).map((block) => {
-    const lines = block.split("\n");
-    const event = lines.find((line) => line.startsWith("event: "))?.slice(7) ?? "message";
-    const idText = lines.find((line) => line.startsWith("id: "))?.slice(4);
-    const dataText = lines.find((line) => line.startsWith("data: "))?.slice(6) ?? "null";
-    return { event, data: JSON.parse(dataText), ...(idText ? { id: Number(idText) } : {}) };
-  });
+  const events = text
+    .trim()
+    .split("\n\n")
+    .filter(Boolean)
+    .map((block) => {
+      const lines = block.split("\n");
+      const event =
+        lines.find((line) => line.startsWith("event: "))?.slice(7) ?? "message";
+      const idText = lines.find((line) => line.startsWith("id: "))?.slice(4);
+      const dataText =
+        lines.find((line) => line.startsWith("data: "))?.slice(6) ?? "null";
+      return {
+        event,
+        data: JSON.parse(dataText),
+        ...(idText ? { id: Number(idText) } : {}),
+      };
+    });
   return { events };
 }
