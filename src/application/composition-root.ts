@@ -82,9 +82,16 @@ class AppendOnlyAudit {
   }
 }
 
+export interface SessionServicePortOverrides {
+  readonly retrieval?: LocalCompositionPorts["retrieval"];
+  readonly models?: LocalCompositionPorts["models"];
+  readonly responses?: LocalCompositionPorts["responses"];
+}
+
 export function createSessionService(
   config: HelixConfig,
   keyProvider: SessionEncryption,
+  overrides: SessionServicePortOverrides = {},
 ): SessionServiceComposition {
   if (!keyProvider) throw new Error("SESSION_KEY_PROVIDER_REQUIRED");
   const sqlite = new SqliteSessionStore(config.taskDatabasePath, keyProvider);
@@ -106,9 +113,12 @@ export function createSessionService(
         "WhichLLM",
       );
   const ports: LocalCompositionPorts = {
-    retrieval: new IcfRetrievalAdapter(icfTransport, identity),
-    models: new WhichLlmSelectionAdapter(whichTransport, identity),
-    responses: new UnavailableResponseAdapter(),
+    retrieval:
+      overrides.retrieval ?? new IcfRetrievalAdapter(icfTransport, identity),
+    models:
+      overrides.models ??
+      new WhichLlmSelectionAdapter(whichTransport, identity),
+    responses: overrides.responses ?? new UnavailableResponseAdapter(),
     persistence,
     audit: new AppendOnlyAudit(
       resolve(config.taskDatabasePath, "..", "helix-audit.jsonl"),

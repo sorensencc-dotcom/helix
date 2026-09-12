@@ -8,6 +8,7 @@ const daemon = createDaemon({
   version: "0.1.0",
   taskDatabasePath: ":memory:",
   windowsBridgeUrl: "http://127.0.0.1:8792",
+  windowsBridgeCommand: "true",
 });
 const address = await new Promise<{ port: number }>((resolve) => {
   daemon.listen(0, "127.0.0.1", () =>

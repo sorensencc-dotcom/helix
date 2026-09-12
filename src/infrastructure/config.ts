@@ -16,6 +16,7 @@ const configSchema = z.object({
   sigilExecuteUrl: z.string().url().optional(),
   whichLlmUrl: z.string().url().optional(),
   windowsBridgeUrl: z.string().url(),
+  windowsBridgeCommand: z.string().min(1),
 });
 
 export type HelixConfig = z.infer<typeof configSchema>;
@@ -24,12 +25,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): HelixConfig {
   if (!env.HELIX_WINDOWS_BRIDGE_URL) {
     throw new Error("WINDOWS_BRIDGE_URL_REQUIRED");
   }
+  if (!env.HELIX_WINDOWS_BRIDGE_COMMAND) {
+    throw new Error("WINDOWS_BRIDGE_COMMAND_REQUIRED");
+  }
   return configSchema.parse({
     host: env.HELIX_HOST,
     port: env.HELIX_PORT,
     version: env.HELIX_VERSION,
     taskDatabasePath: env.HELIX_TASK_DATABASE_PATH,
     windowsBridgeUrl: env.HELIX_WINDOWS_BRIDGE_URL,
+    windowsBridgeCommand: env.HELIX_WINDOWS_BRIDGE_COMMAND,
     ...(env.HELIX_ICF_RESOLVE_URL
       ? { icfResolveUrl: env.HELIX_ICF_RESOLVE_URL }
       : {}),

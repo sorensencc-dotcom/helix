@@ -7,8 +7,26 @@ import {
   CurlNegotiateFetch,
   WindowsBridgeCryptoProvider,
 } from "./platform/windows-integrations.js";
+import { BridgeSupervisor } from "./platform/bridge-supervisor.js";
 
 const config = loadConfig();
+
+const bridgeSupervisor = new BridgeSupervisor({
+  command: config.windowsBridgeCommand,
+  env: {
+    ...process.env,
+    HELIX_WINDOWS_BRIDGE_PREFIX: `${config.windowsBridgeUrl}/`,
+  },
+  readyUrl: config.windowsBridgeUrl,
+  onExit: (code, signal) => {
+    console.error(
+      `windows-bridge exited unexpectedly (code=${code}, signal=${signal}); shutting down`,
+    );
+    shutdown();
+  },
+});
+await bridgeSupervisor.start();
+
 const taskStore = new SqliteTaskStore(config.taskDatabasePath);
 const negotiateFetch = new CurlNegotiateFetch();
 const cryptoProvider = new WindowsBridgeCryptoProvider(
@@ -28,6 +46,7 @@ const server = createDaemon(config, {
 server.listen(config.port, config.host);
 
 function shutdown(): void {
+  bridgeSupervisor.stop();
   server.close(() => {
     composition.close();
     taskStore.close();
