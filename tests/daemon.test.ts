@@ -25,6 +25,11 @@ describe("daemon routes", () => {
     const page = await fetch(`${url}/`);
     expect(page.status).toBe(200);
     expect(page.headers.get("content-type")).toContain("text/html");
+    expect(page.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(page.headers.get("x-frame-options")).toBe("DENY");
+    expect(page.headers.get("content-security-policy")).toContain(
+      "object-src 'none'",
+    );
     expect(await page.text()).toContain("Helix");
 
     const index = await fetch(`${url}/index.html`);

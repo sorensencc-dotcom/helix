@@ -48,6 +48,15 @@ const contentTypes: Record<string, string> = {
   ".js": "text/javascript; charset=utf-8",
 };
 
+const securityHeaders = {
+  "cache-control": "no-store",
+  "content-security-policy":
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+  "referrer-policy": "no-referrer",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+};
+
 type ReadinessState = "unknown" | "unavailable" | "configured" | "ready";
 
 type Readiness = {
@@ -103,6 +112,7 @@ function serveWebAsset(
     const body = readFileSync(filePath);
     const extension = filePath.slice(filePath.lastIndexOf("."));
     response.writeHead(200, {
+      ...securityHeaders,
       "content-type": contentTypes[extension] ?? "application/octet-stream",
     });
     response.end(body);
@@ -172,6 +182,8 @@ export function createDaemon(
   const publishTask = (task: StoredTask | Task) =>
     stream.publish("metadata", { task });
   return createServer((request: IncomingMessage, response: ServerResponse) => {
+    for (const [name, value] of Object.entries(securityHeaders))
+      response.setHeader(name, value);
     if (serveWebAsset(request, response)) return;
     if (request.method === "GET" && request.url === "/health") {
       sendJson(response, 200, healthResponse(config.version));
