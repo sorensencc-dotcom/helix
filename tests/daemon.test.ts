@@ -184,4 +184,30 @@ describe("daemon routes", () => {
     });
     expect(await response.text()).toContain("id: 2\nevent: done");
   });
+
+  it("publishes task lifecycle events to a live follow stream", async () => {
+    const response = await fetch(`${url}/v1/stream?follow=1`);
+    const reader = response.body?.getReader();
+    expect(reader).toBeDefined();
+    const first = await reader!.read();
+    expect(new TextDecoder().decode(first.value)).toContain("event: metadata");
+
+    await fetch(`${url}/v1/sessions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sessionId: "sse_session" }),
+    });
+    await fetch(`${url}/v1/tasks`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        sessionId: "sse_session",
+        instruction: "observe",
+      }),
+    });
+
+    const second = await reader!.read();
+    expect(new TextDecoder().decode(second.value)).toContain('"id":"task_');
+    await reader!.cancel();
+  });
 });
