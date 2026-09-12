@@ -61,3 +61,44 @@ export function parseWindowsBridgeResponse(value: unknown): WindowsOperator {
   }
   return parsed.data.identity;
 }
+
+/**
+ * An already-authenticated fetch (e.g. Negotiate/SSPI credentials attached by
+ * the caller). This resolver never attaches credentials or reads headers
+ * itself -- the native `windows-bridge` process owns authentication.
+ */
+export type AuthenticatedFetch = (url: string) => Promise<{
+  readonly ok: boolean;
+  json(): Promise<unknown>;
+}>;
+
+export class WindowsBridgePrincipalResolver implements WindowsPrincipalResolver {
+  public constructor(
+    private readonly bridgeUrl: string,
+    private readonly authenticatedFetch?: AuthenticatedFetch,
+  ) {}
+
+  public async resolve(): Promise<WindowsOperator> {
+    if (!this.authenticatedFetch) {
+      throw new WindowsAuthenticationError("WINDOWS_AUTH_REQUIRED");
+    }
+
+    let response: { readonly ok: boolean; json(): Promise<unknown> };
+    try {
+      response = await this.authenticatedFetch(this.bridgeUrl);
+    } catch {
+      throw new WindowsAuthenticationError("WINDOWS_AUTH_REQUIRED");
+    }
+    if (!response.ok) {
+      throw new WindowsAuthenticationError("WINDOWS_AUTH_REQUIRED");
+    }
+
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      throw new WindowsAuthenticationError("WINDOWS_IDENTITY_INVALID");
+    }
+    return parseWindowsBridgeResponse(body);
+  }
+}
