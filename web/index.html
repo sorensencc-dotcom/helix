@@ -42,6 +42,9 @@
       .composer-row { display: flex; gap: 10px; }
       .composer { flex: 1; }
       .empty { color: var(--helix-muted); text-align: center; padding: 15vh 20px; }
+      .notice { padding: 9px 26px; border-bottom: 1px solid var(--helix-border); color: #d8ae59; font: .68rem Barlow, sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+      .taskline { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; color: var(--helix-muted); font: .68rem Barlow, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+      .taskline .secondary { padding: 4px 7px; font-size: .58rem; }
       @media (max-width: 720px) { .sidebar { width: 64px; padding: 18px 10px; } .sidebar .badge, .sidebar .primary, .sidebar .search, .sidebar .section-label, .sidebar .conversation, .sidebar .connections { display: none; } .logo { font-size: 1.35rem; writing-mode: vertical-rl; } .topbar { padding: 12px 16px; align-items: flex-start; } .top-meta { flex-wrap: wrap; justify-content: flex-end; } .thread, .composer-wrap { padding-left: 16px; padding-right: 16px; } .message { max-width: 94%; } }
       @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
     </style>
@@ -59,14 +62,15 @@
         <div class="section-label">Earlier</div>
         <div class="conversation">IronLedger review</div>
         <div class="conversation">Forge status</div>
-        <div class="connections"><div>ICF <span class="connected">● Connected</span></div><div>Sigil <span class="connected">● Connected</span></div></div>
+        <div class="connections"><div>Mode <span class="tag">LOCAL FIXTURE</span></div><div>ICF <span>● Unavailable</span></div><div>Sigil <span>● Unavailable</span></div></div>
       </aside>
       <main class="main">
         <header class="topbar">
-          <div class="title">Local operator session</div>
+          <div class="title">Local operator session <span class="badge">Read-only</span></div>
           <div class="top-meta"><span id="model">WhichLLM · automatic</span><span class="badge" id="persistence">Local-only</span><span class="badge" id="daemon-state">Checking…</span></div>
         </header>
-        <section class="thread" id="thread" aria-live="polite"><div class="empty" id="empty">Ask Helix about your governed context.<br /><small>Automatic retrieval is ready when ICF is connected.</small></div></section>
+        <div class="notice" role="status">LOCAL FIXTURE MODE · No live authority or production control is available.</div>
+        <section class="thread" id="thread" aria-live="polite"><div class="empty" id="empty">Ask Helix about your governed context.<br /><small>Governed retrieval fails closed while ICF is unavailable.</small></div></section>
         <form class="composer-wrap" id="ask-form">
           <div class="scope"><span>Scope</span><span class="tag">Automatic</span><span class="tag">Read-only</span><button class="secondary" type="button" id="scope">Edit scope</button></div>
           <div class="composer-row"><input class="composer" id="prompt" autocomplete="off" placeholder="Ask Helix…" aria-label="Ask Helix" required /><button class="primary" type="submit">Send →</button></div>
@@ -75,17 +79,21 @@
       </main>
     </div>
     <script>
-      const state = { sessionId: null };
+      const state = { sessionId: null, tasks: new Map(), lastEventId: 0 };
       const $ = (id) => document.getElementById(id);
       const setState = (text, good = false) => { $('daemon-state').textContent = text; $('daemon-state').classList.toggle('connected', good); };
       async function json(path, init) { const res = await fetch(path, init); const body = await res.json(); if (!res.ok) throw new Error(body.code || `HTTP_${res.status}`); return body; }
       async function ensureSession() { if (!state.sessionId) state.sessionId = (await json('/v1/sessions', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).sessionId; return state.sessionId; }
-      function addMessage(text, user, disclosure) { $('empty')?.remove(); const item = document.createElement('article'); item.className = `message${user ? ' user' : ''}`; item.innerHTML = `<div class="bubble"></div>${disclosure ? `<div class="disclosure">${disclosure}</div>` : ''}`; item.querySelector('.bubble').textContent = text; $('thread').append(item); item.scrollIntoView({ behavior: 'smooth', block: 'end' }); }
-      async function refresh() { try { const status = await json('/v1/status'); setState(`Daemon · ${status.status}`, true); } catch { setState('Daemon unavailable'); } }
-      $('ask-form').addEventListener('submit', async (event) => { event.preventDefault(); const input = $('prompt'); const text = input.value.trim(); if (!text) return; input.value = ''; addMessage(text, true); try { const sessionId = await ensureSession(); const task = await json('/v1/tasks', { method: 'POST', headers: { 'content-type': 'application/json', 'idempotency-key': `ui-${Date.now()}` }, body: JSON.stringify({ sessionId, instruction: text }) }); addMessage(`Task ${task.id} accepted. Helix will return governed evidence and model disclosure when the configured adapters are connected.`, false, `State: ${task.state} · Persistence: session policy · Governance: ICF boundary active`); } catch (error) { addMessage(`Request unavailable: ${error.message}`, false, 'No governed response was produced. Check daemon and ICF status before retrying.'); } });
+      function addMessage(text, user, disclosure, task) { $('empty')?.remove(); const item = document.createElement('article'); item.className = `message${user ? ' user' : ''}`; item.innerHTML = `<div class="bubble"></div>${task ? `<div class="taskline"><span>${task.state}</span><button class="secondary cancel" type="button">Cancel task</button></div>` : ''}${disclosure ? `<div class="disclosure"></div>` : ''}`; item.querySelector('.bubble').textContent = text; if (disclosure) item.querySelector('.disclosure').textContent = disclosure; if (task) { item.dataset.taskId = task.id; item.querySelector('.cancel').addEventListener('click', () => cancelTask(task.id, item)); } $('thread').append(item); item.scrollIntoView({ behavior: 'smooth', block: 'end' }); return item; }
+      function updateTask(item, task) { const line = item.querySelector('.taskline span'); if (line) line.textContent = task.state; const button = item.querySelector('.cancel'); if (button) button.hidden = !['QUEUED'].includes(task.state); if (task.response?.text) item.querySelector('.bubble').textContent = task.response.text; }
+      async function cancelTask(id, item) { try { const task = await json(`/v1/tasks/${encodeURIComponent(id)}/cancel`, { method: 'POST' }); updateTask(item, task); } catch (error) { item.querySelector('.disclosure').textContent = `Cancellation unavailable: ${error.message}`; } }
+      async function loadSessions() { const result = await json('/v1/sessions'); const list = document.querySelector('.conversation'); list?.remove(); for (const id of result.sessions) { const entry = document.createElement('div'); entry.className = 'conversation'; entry.textContent = id; entry.addEventListener('click', () => { state.sessionId = id; }); $('search').after(entry); } }
+      async function stream() { try { const result = await json('/v1/status'); setState(`Daemon · ${result.status}`, true); await loadSessions(); } catch { setState('Daemon unavailable'); } }
+      function connectEvents() { const events = new EventSource('/v1/stream'); events.addEventListener('metadata', (event) => { state.lastEventId = Number(event.lastEventId) || state.lastEventId; }); events.addEventListener('done', (event) => { state.lastEventId = Number(event.lastEventId) || state.lastEventId; }); events.onerror = () => { events.close(); setState('Stream disconnected'); }; }
+      $('ask-form').addEventListener('submit', async (event) => { event.preventDefault(); const input = $('prompt'); const text = input.value.trim(); if (!text) return; input.value = ''; addMessage(text, true); try { const sessionId = await ensureSession(); const task = await json('/v1/tasks', { method: 'POST', headers: { 'content-type': 'application/json', 'idempotency-key': `ui-${Date.now()}` }, body: JSON.stringify({ sessionId, instruction: text }) }); const item = addMessage(`Task ${task.id} accepted.`, false, 'No governed response is produced while authority adapters are unavailable.', task); state.tasks.set(task.id, item); } catch (error) { addMessage(`Request unavailable: ${error.message}`, false, 'No governed response was produced. Check daemon and ICF status before retrying.'); } });
       $('new-session').addEventListener('click', () => { state.sessionId = null; $('thread').innerHTML = '<div class="empty" id="empty">New local session.<br /><small>Governed content remains session-scoped until explicitly exported.</small></div>'; });
       $('scope').addEventListener('click', () => { $('notice').textContent = 'Scope editing will use ICF context packets; automatic retrieval remains the default.'; });
-      refresh();
+      stream(); connectEvents();
     </script>
   </body>
 </html>
