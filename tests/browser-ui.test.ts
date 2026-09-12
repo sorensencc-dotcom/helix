@@ -15,6 +15,6 @@ describe("browser operator console boundary", () => {
     const html = await readFile(new URL("../web/index.html", import.meta.url), "utf8");
     expect(html).toContain("/v1/tasks/${encodeURIComponent(task.id)}");
     expect(html).toContain("/v1/tasks/${encodeURIComponent(id)}/cancel");
-    expect(html).toContain("new EventSource('/v1/stream')");
+    expect(html).toContain("new EventSource('/v1/stream?follow=1')");
   });
 });

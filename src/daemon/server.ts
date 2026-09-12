@@ -12,7 +12,7 @@ import {
   type TaskStore,
 } from "../infrastructure/task-store.js";
 import { healthResponse } from "./health.js";
-import { writeSse } from "./sse.js";
+import { createSseBuffer, writeSse } from "./sse.js";
 import { authenticateRequest } from "./auth.js";
 import type { WindowsPrincipalResolver } from "./auth.js";
 import type { ComposedSessionService } from "../application/composed-session-service.js";
@@ -92,6 +92,10 @@ export function createDaemon(
   const persistenceClass: SessionContext["persistenceClass"] =
     taskStore instanceof SqliteTaskStore ? "encrypted-sqlite" : "ram-only";
   const idempotency = new Map<string, { fingerprint: string; body: unknown }>();
+  const stream = createSseBuffer();
+  stream.publish("metadata", { version: config.version });
+  stream.publish("done", { status: "COMPLETED" });
+  const publishTask = (task: StoredTask | Task) => stream.publish("metadata", { task });
   return createServer((request: IncomingMessage, response: ServerResponse) => {
     if (request.method === "GET" && request.url === "/health") {
       sendJson(response, 200, healthResponse(config.version));
@@ -117,20 +121,15 @@ export function createDaemon(
       sendJson(response, 200, { sessions: taskStore.listSessionIds() });
       return;
     }
-    if (request.method === "GET" && request.url === "/v1/stream") {
+    if (request.method === "GET" && request.url?.startsWith("/v1/stream")) {
       response.writeHead(200, {
         "content-type": "text/event-stream",
         "cache-control": "no-cache",
         connection: "keep-alive",
       });
       const lastEventId = Number(request.headers["last-event-id"] ?? 0);
-      if (!Number.isFinite(lastEventId) || lastEventId < 1) {
-        writeSse(response, "metadata", { version: config.version }, 1);
-      }
-      if (!Number.isFinite(lastEventId) || lastEventId < 2) {
-        writeSse(response, "done", { status: "COMPLETED" }, 2);
-      }
-      response.end();
+      for (const item of stream.replay(Number.isFinite(lastEventId) ? lastEventId : 0)) writeSse(response, item.event, item.data, item.id);
+      if (request.url !== "/v1/stream?follow=1") response.end(); else stream.subscribe(response);
       return;
     }
     void (async () => {
@@ -242,6 +241,7 @@ export function createDaemon(
               correlationId: `corr_${randomUUID()}`,
             };
             taskStore.saveTask(result);
+            publishTask(result);
             if (typeof key === "string")
               idempotency.set(key, { fingerprint, body: result });
             sendJson(response, 202, result);
@@ -313,6 +313,7 @@ export function createDaemon(
               metadata,
             };
             taskStore.saveTask(result);
+            publishTask(result);
             if (typeof key === "string")
               idempotency.set(key, { fingerprint, body: result });
             sendJson(response, 202, result);
