@@ -12,6 +12,7 @@ import {
 import {
   IcfRetrievalAdapter,
   WhichLlmSelectionAdapter,
+  SigilExecutionAdapter,
   UnavailableResponseAdapter,
 } from "../adapters/local-authority-adapters.js";
 import type {
@@ -24,7 +25,17 @@ import type { IdentityEnvelope } from "../domain/identity.js";
 
 export interface SessionServiceComposition {
   readonly service: ComposedSessionService;
+  readonly sigil: SigilExecutionAdapter;
   readonly close: () => void;
+}
+
+function correlationIdFor(sessionId: string): string {
+  // The approved authority contract (src/adapters/contracts.ts) restricts
+  // correlationId to ^corr_[a-z0-9-]+$, but session IDs are client-supplied
+  // and unrestricted. Normalize rather than reject so any session ID can
+  // still reach the real ICF/WhichLLM HTTP adapters.
+  const normalized = sessionId.toLowerCase().replace(/[^a-z0-9-]/g, "-");
+  return `corr_${normalized}`;
 }
 
 function identityFor(session: PersistenceRequest["session"]): IdentityEnvelope {
@@ -37,7 +48,7 @@ function identityFor(session: PersistenceRequest["session"]): IdentityEnvelope {
     },
     helixSession: {
       sessionId: session.sessionId,
-      correlationId: `corr_${session.sessionId}`,
+      correlationId: correlationIdFor(session.sessionId),
       createdAt: new Date().toISOString(),
       governed: session.governanceState === "governed",
     },
@@ -112,6 +123,14 @@ export function createSessionService(
     : new UnavailableAdapterTransport<Record<string, unknown>, unknown>(
         "WhichLLM",
       );
+  const sigilTransport = config.sigilExecuteUrl
+    ? new HttpAdapterTransport<Record<string, unknown>, unknown>(
+        config.sigilExecuteUrl,
+        (value) => value as never,
+      )
+    : new UnavailableAdapterTransport<Record<string, unknown>, unknown>(
+        "Sigil",
+      );
   const ports: LocalCompositionPorts = {
     retrieval:
       overrides.retrieval ?? new IcfRetrievalAdapter(icfTransport, identity),
@@ -124,5 +143,9 @@ export function createSessionService(
       resolve(config.taskDatabasePath, "..", "helix-audit.jsonl"),
     ),
   };
-  return { service: new Service(ports), close: () => persistence.close() };
+  return {
+    service: new Service(ports),
+    sigil: new SigilExecutionAdapter(sigilTransport, identity),
+    close: () => persistence.close(),
+  };
 }

@@ -6,13 +6,17 @@ import type {
   RetrievalResponse,
   ResponseRequest,
   ResponseResult,
+  SessionContext,
 } from "../application/composition-contract.js";
 import {
   icfRequest,
   icfResponse,
   parseAdapterResponse,
+  sigilRequest,
+  sigilResponse,
   whichLlmRequest,
   whichLlmResponse,
+  type AdapterFailure,
 } from "./contracts.js";
 import type {
   AdapterTransport,
@@ -102,6 +106,47 @@ export class WhichLlmSelectionAdapter {
       reason: "authority",
       overrideStatus: request.requestedModel ? "operator" : "auto",
     };
+  }
+}
+
+export interface SigilProposal {
+  readonly proposalId: string;
+  readonly state: "APPROVAL_REQUIRED" | "DENIED";
+}
+
+export class SigilExecutionAdapter {
+  public constructor(
+    private readonly transport: AdapterTransport<
+      Record<string, unknown>,
+      unknown
+    >,
+    private readonly identity: (request: { session: SessionContext }) => IdentityEnvelope,
+  ) {}
+
+  public async propose(
+    capability: string,
+    args: Readonly<Record<string, unknown>>,
+    session: SessionContext,
+  ): Promise<SigilProposal | AdapterFailure> {
+    const identity = this.identity({ session });
+    const candidate = sigilRequest.safeParse({
+      contract: "helix-adapter.v1",
+      correlationId: identity.helixSession.correlationId,
+      identity,
+      capability,
+      arguments: args,
+    });
+    if (!candidate.success) {
+      return {
+        status: "failure",
+        code: "MALFORMED_RESPONSE",
+        message: "Sigil capability request failed the approved schema.",
+      };
+    }
+    const result = await this.transport.send(candidate.data, identity);
+    const parsed = parseAdapterResponse(sigilResponse, result);
+    if ("status" in parsed && parsed.status === "failure") return parsed;
+    return { proposalId: parsed.proposalId, state: parsed.state };
   }
 }
 

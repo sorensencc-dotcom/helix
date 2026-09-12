@@ -23,6 +23,7 @@ describe("composition root", () => {
       getKey: async () => new Uint8Array(32),
     });
     expect(composition.service).toBeDefined();
+    expect(composition.sigil).toBeDefined();
     composition.close();
   });
 });

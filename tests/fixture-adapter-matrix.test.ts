@@ -12,6 +12,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createIdentityEnvelope } from "../src/domain/identity.js";
 import {
   IcfRetrievalAdapter,
+  SigilExecutionAdapter,
   WhichLlmSelectionAdapter,
 } from "../src/adapters/local-authority-adapters.js";
 import { HttpAdapterTransport } from "../src/adapters/transport.js";
@@ -102,7 +103,7 @@ beforeAll(async () => {
           lineageId: "lin_fixture_matrix",
         }),
       );
-    } else {
+    } else if (domain === "whichllm") {
       response.end(
         JSON.stringify({
           contract: "helix-adapter.v1",
@@ -110,6 +111,15 @@ beforeAll(async () => {
           provider: "fixture-provider",
           model,
           cloudEnabled: false,
+        }),
+      );
+    } else {
+      response.end(
+        JSON.stringify({
+          contract: "helix-adapter.v1",
+          status: "success",
+          proposalId: "proposal_fixture-matrix",
+          state: "APPROVAL_REQUIRED",
         }),
       );
     }
@@ -145,6 +155,15 @@ function whichLlmAdapter(
     50,
   );
   return new WhichLlmSelectionAdapter(transport, () => identity);
+}
+
+function sigilAdapter(scenario: "success" | FailureScenario) {
+  const transport = new HttpAdapterTransport<Record<string, unknown>, unknown>(
+    `${baseUrl}/sigil/${scenario}`,
+    (value) => value as never,
+    50,
+  );
+  return new SigilExecutionAdapter(transport, () => identity);
 }
 
 const failureScenarios: FailureScenario[] = [
@@ -184,6 +203,31 @@ describe("fixture adapter matrix (local contract evidence only)", () => {
         requestedModel: "operator-requested-model",
       }),
     ).rejects.toThrow("MODEL_OVERRIDE_DENIED");
+  });
+
+  it("resolves a Sigil proposal through the real HTTP transport", async () => {
+    await expect(
+      sigilAdapter("success").propose(
+        "sigil.example.capability",
+        { arg: 1 },
+        session("governed"),
+      ),
+    ).resolves.toEqual({
+      proposalId: "proposal_fixture-matrix",
+      state: "APPROVAL_REQUIRED",
+    });
+  });
+
+  describe.each(failureScenarios)("Sigil %s", (scenario) => {
+    it("returns a failure instead of a proposal", async () => {
+      await expect(
+        sigilAdapter(scenario).propose(
+          "sigil.example.capability",
+          { arg: 1 },
+          session("governed"),
+        ),
+      ).resolves.toMatchObject({ status: "failure" });
+    });
   });
 
   describe.each(failureScenarios)("ICF %s", (scenario) => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   IcfRetrievalAdapter,
+  SigilExecutionAdapter,
   UnavailableResponseAdapter,
   WhichLlmSelectionAdapter,
 } from "../src/adapters/local-authority-adapters.js";
@@ -70,6 +71,31 @@ describe("local authority adapters", () => {
         retrieval: { contextPacket: null, sourcesUsed: [], state: "degraded" },
       }),
     ).rejects.toThrow("UNAVAILABLE");
+  });
+
+  it("returns a failure when Sigil is unavailable", async () => {
+    const adapter = new SigilExecutionAdapter(transport, () => identity);
+    await expect(
+      adapter.propose("sigil.example.capability", {}, session),
+    ).resolves.toMatchObject({ status: "failure", code: "UNAVAILABLE" });
+  });
+
+  it("returns a proposal when Sigil accepts the capability request", async () => {
+    const mockTransport = {
+      send: async () => ({
+        contract: "helix-adapter.v1",
+        status: "success",
+        proposalId: "proposal_fixture-001",
+        state: "APPROVAL_REQUIRED",
+      }),
+    };
+    const adapter = new SigilExecutionAdapter(mockTransport, () => identity);
+    await expect(
+      adapter.propose("sigil.example.capability", { arg: 1 }, session),
+    ).resolves.toEqual({
+      proposalId: "proposal_fixture-001",
+      state: "APPROVAL_REQUIRED",
+    });
   });
 
   it("never executes a response locally when no execution authority exists", async () => {
