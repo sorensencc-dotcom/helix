@@ -29,6 +29,7 @@ describe("daemon SQLite task-store wiring", () => {
         port: 0,
         version: "0.1.0",
         taskDatabasePath: databasePath,
+        windowsBridgeUrl: "http://127.0.0.1:8792",
       },
       { taskStore: firstStore },
     );
@@ -67,6 +68,7 @@ describe("daemon SQLite task-store wiring", () => {
         port: 0,
         version: "0.1.0",
         taskDatabasePath: databasePath,
+        windowsBridgeUrl: "http://127.0.0.1:8792",
       },
       { taskStore: secondStore },
     );

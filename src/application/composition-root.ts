@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 import type { HelixConfig } from "../infrastructure/config.js";
 import {
   SqliteSessionStore,
-  type SessionKeyProvider,
+  type SessionEncryption,
 } from "../infrastructure/session-store.js";
 import {
   UnavailableAdapterTransport,
@@ -84,7 +84,7 @@ class AppendOnlyAudit {
 
 export function createSessionService(
   config: HelixConfig,
-  keyProvider: SessionKeyProvider,
+  keyProvider: SessionEncryption,
 ): SessionServiceComposition {
   if (!keyProvider) throw new Error("SESSION_KEY_PROVIDER_REQUIRED");
   const sqlite = new SqliteSessionStore(config.taskDatabasePath, keyProvider);

@@ -52,6 +52,7 @@ async function withDaemon(
       port: 0,
       version: "0.1.0",
       taskDatabasePath: ":memory:",
+      windowsBridgeUrl: "http://127.0.0.1:8792",
     },
     options,
   );

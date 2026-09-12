@@ -1,27 +1,38 @@
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/infrastructure/config.js";
 
+const bridgeUrl = "http://127.0.0.1:8792";
+
 describe("loadConfig", () => {
   it("loads safe local defaults", () => {
-    expect(loadConfig({})).toEqual({
+    expect(loadConfig({ HELIX_WINDOWS_BRIDGE_URL: bridgeUrl })).toEqual({
       host: "127.0.0.1",
       port: 8787,
       version: "0.1.0",
       taskDatabasePath: "helix.sqlite",
+      windowsBridgeUrl: bridgeUrl,
     });
   });
 
   it("rejects invalid ports", () => {
-    expect(() => loadConfig({ HELIX_PORT: "0" })).toThrow();
+    expect(() =>
+      loadConfig({ HELIX_PORT: "0", HELIX_WINDOWS_BRIDGE_URL: bridgeUrl }),
+    ).toThrow();
   });
 
   it("rejects non-loopback bind hosts", () => {
-    expect(() => loadConfig({ HELIX_HOST: "0.0.0.0" })).toThrow();
+    expect(() =>
+      loadConfig({
+        HELIX_HOST: "0.0.0.0",
+        HELIX_WINDOWS_BRIDGE_URL: bridgeUrl,
+      }),
+    ).toThrow();
   });
 
   it("loads owner-supplied adapter labels without enabling adapters", () => {
     expect(
       loadConfig({
+        HELIX_WINDOWS_BRIDGE_URL: bridgeUrl,
         HELIX_ICF_RESOLVE_URL: "https://icf.example.test/resolve",
         HELIX_SIGIL_EXECUTE_URL: "https://sigil.example.test/execute",
         HELIX_WHICHLLM_URL: "https://whichllm.example.test/route",
@@ -34,6 +45,15 @@ describe("loadConfig", () => {
   });
 
   it("rejects malformed adapter URLs", () => {
-    expect(() => loadConfig({ HELIX_ICF_RESOLVE_URL: "not-a-url" })).toThrow();
+    expect(() =>
+      loadConfig({
+        HELIX_WINDOWS_BRIDGE_URL: bridgeUrl,
+        HELIX_ICF_RESOLVE_URL: "not-a-url",
+      }),
+    ).toThrow();
+  });
+
+  it("fails at boot with WINDOWS_BRIDGE_URL_REQUIRED when the bridge URL is not configured", () => {
+    expect(() => loadConfig({})).toThrow("WINDOWS_BRIDGE_URL_REQUIRED");
   });
 });
