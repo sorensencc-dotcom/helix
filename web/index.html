@@ -31,6 +31,7 @@
       .connected { color: #9bb58c; }
       .main { min-width: 0; flex: 1; display: flex; flex-direction: column; }
       .topbar { min-height: 66px; padding: 14px 26px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--helix-border); }
+      .menu-toggle { display: none; }
       .title { font-family: Georgia, serif; font-size: 1.15rem; }
       .top-meta { display: flex; align-items: center; gap: 9px; color: var(--helix-muted); font-size: .7rem; }
       .thread { width: min(900px, 100%); flex: 1; margin: 0 auto; padding: 30px 30px 22px; overflow: auto; }
@@ -46,13 +47,13 @@
       .notice { padding: 9px 26px; border-bottom: 1px solid var(--helix-border); color: #d8ae59; font: .68rem Barlow, sans-serif; letter-spacing: .12em; text-transform: uppercase; }
       .taskline { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; color: var(--helix-muted); font: .68rem Barlow, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
       .taskline .secondary { padding: 4px 7px; font-size: .58rem; }
-      @media (max-width: 720px) { .sidebar { width: 64px; padding: 18px 10px; } .sidebar .badge, .sidebar .primary, .sidebar .search, .sidebar .section-label, .sidebar .conversation, .sidebar .connections { display: none; } .logo { font-size: 1.35rem; writing-mode: vertical-rl; } .topbar { padding: 12px 16px; align-items: flex-start; } .top-meta { flex-wrap: wrap; justify-content: flex-end; } .thread, .composer-wrap { padding-left: 16px; padding-right: 16px; } .message { max-width: 94%; } }
-      @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+      @media (max-width: 720px) { .sidebar { position: fixed; z-index: 3; inset: 0 auto 0 0; width: min(280px, 82vw); padding: 18px 16px; transform: translateX(-100%); transition: transform .2s ease; box-shadow: 8px 0 24px rgba(0,0,0,.35); } .sidebar.open { transform: translateX(0); } .sidebar .badge, .sidebar .primary, .sidebar .search, .sidebar .section-label, .sidebar .conversation, .sidebar .connections { display: revert; } .sidebar .section-label { display: block; } .sidebar .connections { display: block; } .logo { font-size: 1.35rem; } .menu-toggle { display: inline-block; background: transparent; color: var(--helix-text); border: 1px solid var(--helix-border); padding: 8px 10px; font-size: .72rem; } .topbar { padding: 12px 16px; align-items: center; } .top-meta { flex-wrap: wrap; justify-content: flex-end; } .thread, .composer-wrap { padding-left: 16px; padding-right: 16px; } .message { max-width: 94%; } }
+      @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition-duration: 0s !important; } }
     </style>
   </head>
   <body>
     <div class="app">
-      <aside class="sidebar" aria-label="Conversation navigation">
+      <aside class="sidebar" id="sidebar" aria-label="Conversation navigation">
         <div class="brand"><span class="logo">Helix</span><span class="badge">Read-only</span></div>
         <button class="primary" id="new-session" type="button">+ New conversation</button>
         <label class="section-label" for="search">Filter sessions</label>
@@ -63,7 +64,7 @@
       </aside>
       <main class="main">
         <header class="topbar">
-          <h1 class="title">Local operator session <span class="badge">Read-only</span></h1>
+          <div><button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="sidebar">Menu</button><h1 class="title">Local operator session <span class="badge">Read-only</span></h1></div>
           <div class="top-meta"><span id="model">WhichLLM · automatic</span><span class="badge" id="persistence">Local-only</span><span class="badge" id="daemon-state">Checking…</span></div>
         </header>
         <div class="notice" role="status" aria-live="polite">LOCAL FIXTURE MODE · No live authority or production control is available.</div>
@@ -135,6 +136,7 @@
       async function connectEvents() { if (state.streamAbort) state.streamAbort.abort(); const controller = new AbortController(); state.streamAbort = controller; while (!controller.signal.aborted) { try { const response = await fetch('/v1/stream?follow=1', { headers: { accept: 'text/event-stream', 'Last-Event-ID': String(state.lastEventId) }, signal: controller.signal }); if (!response.ok) throw new Error(`HTTP_${response.status}`); state.streamRetry = 0; setState('Live stream · connected', true); await readSse(response, controller.signal); } catch (error) { if (controller.signal.aborted) return; state.streamRetry = Math.min(state.streamRetry + 1, 5); setState('Live stream · reconnecting'); $('notice').textContent = `Live updates unavailable (${error.message}); retrying from event ${state.lastEventId}.`; await waitForReconnect(Math.min(1000 * 2 ** (state.streamRetry - 1), 10000), controller.signal); } } }
       async function checkDaemon() { try { const result = await json('/v1/status', undefined, validateStatus); setState(`Daemon · ${result.status}`, true); renderReadiness(result.readiness); await loadSessions(); } catch { setState('Daemon unavailable'); } }
       $('search').addEventListener('input', renderSessions);
+      $('menu-toggle').addEventListener('click', () => { const open = $('sidebar').classList.toggle('open'); $('menu-toggle').setAttribute('aria-expanded', String(open)); });
       $('ask-form').addEventListener('submit', async (event) => { event.preventDefault(); const input = $('prompt'); const text = input.value.trim(); if (!text) return; input.value = ''; try { const sessionId = await ensureSession(); addMessage(text, true); const task = await json('/v1/tasks', { method: 'POST', headers: { 'content-type': 'application/json', 'idempotency-key': `ui-${Date.now()}` }, body: JSON.stringify({ sessionId, instruction: text }) }, validateTask); state.taskRecords.set(task.id, task); applyTask(state.taskRecords.get(task.id)); } catch (error) { addMessage(`Request unavailable: ${error.message}`, false, 'No governed response was produced. Check daemon and ICF status before retrying.'); } });
       $('new-session').addEventListener('click', async () => { try { const result = await json('/v1/sessions', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }, validateSession); state.sessionId = result.sessionId; state.tasks.clear(); state.historyRequest += 1; await loadSessions(); clearThread('New local session.', 'Governed content remains session-scoped until explicitly exported.'); } catch (error) { $('notice').textContent = `Session unavailable: ${error.message}`; } });
       $('scope').addEventListener('click', () => { $('notice').textContent = 'Scope is fixed to Automatic / Read-only in local fixture mode; no scope-edit route is available.'; });
