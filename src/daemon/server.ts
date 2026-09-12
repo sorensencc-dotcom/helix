@@ -4,6 +4,9 @@ import {
   type ServerResponse,
 } from "node:http";
 import { createHash, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { isLoopbackHost, type HelixConfig } from "../infrastructure/config.js";
 import {
   MemoryTaskStore,
@@ -37,6 +40,37 @@ const anonymousOperator: WindowsOperator = {
   sid: "S-1-0-0",
   groups: [],
 };
+
+const webRoot = resolve(fileURLToPath(new URL("../../web", import.meta.url)));
+const contentTypes: Record<string, string> = {
+  ".css": "text/css; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+};
+
+function serveWebAsset(
+  request: IncomingMessage,
+  response: ServerResponse,
+): boolean {
+  if (request.method !== "GET" || !request.url) return false;
+  const pathname = new URL(request.url, "http://localhost").pathname;
+  const relativePath = pathname === "/" ? "index.html" : pathname.slice(1);
+  if (!relativePath || relativePath.startsWith("v1/")) return false;
+  const filePath = resolve(webRoot, relativePath);
+  if (filePath !== webRoot && !filePath.startsWith(`${webRoot}\\`))
+    return false;
+  try {
+    const body = readFileSync(filePath);
+    const extension = filePath.slice(filePath.lastIndexOf("."));
+    response.writeHead(200, {
+      "content-type": contentTypes[extension] ?? "application/octet-stream",
+    });
+    response.end(body);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 async function readJson(
   request: IncomingMessage,
@@ -98,6 +132,7 @@ export function createDaemon(
   const publishTask = (task: StoredTask | Task) =>
     stream.publish("metadata", { task });
   return createServer((request: IncomingMessage, response: ServerResponse) => {
+    if (serveWebAsset(request, response)) return;
     if (request.method === "GET" && request.url === "/health") {
       sendJson(response, 200, healthResponse(config.version));
       return;

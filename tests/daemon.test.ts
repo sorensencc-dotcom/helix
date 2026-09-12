@@ -21,6 +21,21 @@ afterAll(() => {
 });
 
 describe("daemon routes", () => {
+  it("serves the web GUI and stylesheets", async () => {
+    const page = await fetch(`${url}/`);
+    expect(page.status).toBe(200);
+    expect(page.headers.get("content-type")).toContain("text/html");
+    expect(await page.text()).toContain("Helix");
+
+    const index = await fetch(`${url}/index.html`);
+    expect(index.status).toBe(200);
+    expect(await index.text()).toContain("new EventSource");
+
+    const styles = await fetch(`${url}/styles/cast-iron-charlie.css`);
+    expect(styles.status).toBe(200);
+    expect(styles.headers.get("content-type")).toContain("text/css");
+  });
+
   it("rejects unsafe runtime bind configuration", () => {
     expect(() =>
       createDaemon({
