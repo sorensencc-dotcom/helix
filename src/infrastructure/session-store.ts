@@ -39,14 +39,37 @@ export class SqliteSessionStore {
     private readonly encryption: SessionEncryption,
   ) {
     this.database = new DatabaseSync(databasePath);
-    this.database.exec(`
-      CREATE TABLE IF NOT EXISTS ordinary_sessions (
-        session_id TEXT NOT NULL,
-        correlation_id TEXT PRIMARY KEY,
-        record_json TEXT NOT NULL,
-        created_at TEXT NOT NULL
-      ) STRICT
-    `);
+    this.database.exec("PRAGMA busy_timeout = 5000;");
+    this.database.exec("PRAGMA journal_mode = WAL;");
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        this.database.exec(`
+          CREATE TABLE IF NOT EXISTS ordinary_sessions (
+            session_id TEXT NOT NULL,
+            correlation_id TEXT PRIMARY KEY,
+            record_json TEXT NOT NULL,
+            created_at TEXT NOT NULL
+          ) STRICT
+        `);
+        break;
+      } catch (err: unknown) {
+        if (
+          attempt < 4 &&
+          err instanceof Error &&
+          (err.message.includes("busy") || err.message.includes("locked"))
+        ) {
+          Atomics.wait(
+            new Int32Array(new SharedArrayBuffer(4)),
+            0,
+            0,
+            50 * (attempt + 1),
+          );
+          continue;
+        }
+        throw err;
+      }
+    }
   }
 
   public async save(response: AssistantResponse): Promise<void> {
@@ -66,18 +89,37 @@ export class SqliteSessionStore {
           version: 1,
           record: encryptRecord(plaintext, await this.encryption.getKey()),
         };
-    this.database
-      .prepare(
-        `INSERT OR REPLACE INTO ordinary_sessions
-         (session_id, correlation_id, record_json, created_at)
-         VALUES (?, ?, ?, ?)`,
-      )
-      .run(
-        response.sessionId,
-        response.correlationId,
-        JSON.stringify(envelope),
-        new Date().toISOString(),
-      );
+
+    const maxRetries = 10;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        this.database
+          .prepare(
+            `INSERT OR REPLACE INTO ordinary_sessions
+             (session_id, correlation_id, record_json, created_at)
+             VALUES (?, ?, ?, ?)`,
+          )
+          .run(
+            response.sessionId,
+            response.correlationId,
+            JSON.stringify(envelope),
+            new Date().toISOString(),
+          );
+        return;
+      } catch (err: unknown) {
+        if (
+          attempt < maxRetries - 1 &&
+          err instanceof Error &&
+          (err.message.includes("busy") || err.message.includes("locked"))
+        ) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, 20 * (attempt + 1)),
+          );
+          continue;
+        }
+        throw err;
+      }
+    }
   }
 
   public async list(sessionId: SessionId): Promise<AssistantResponse[]> {
