@@ -1,0 +1,12 @@
+<!-- ijfw schema:1 codebase-index -->
+# Codebase index
+
+Generated: 2026-09-13T20:50:48Z
+Root: .
+
+Files: 128
+
+## By file
+
+- `./AGENTS.md` (56 lines, .md) -- ijfw_version: 1.3.2
+- `./CLAUDE.md` (32 lines, .md) -- Stack: Node.js / TypeScript

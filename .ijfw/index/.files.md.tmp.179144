@@ -1,7 +1,7 @@
 <!-- ijfw schema:1 codebase-index -->
 # Codebase index
 
-Generated: 2026-09-13T20:35:04Z
+Generated: 2026-09-13T20:25:57Z
 Root: .
 
 Files: 128
@@ -75,7 +75,7 @@ Files: 128
 - `./playwright.config.ts` (22 lines, .ts) -- import { defineConfig, devices } from '@playwright/test';
 - `./src/adapters/boundary.ts` (69 lines, .ts) -- import { timingSafeEqual } from \"node:crypto\";
 - `./src/adapters/contracts.ts` (98 lines, .ts) -- import { z } from \"zod\";
-- `./src/adapters/local-authority-adapters.ts` (373 lines, .ts) -- import type { IdentityEnvelope } from \"../domain/identity.js\";
+- `./src/adapters/local-authority-adapters.ts` (367 lines, .ts) -- import type { IdentityEnvelope } from \"../domain/identity.js\";
 - `./src/adapters/transport.ts` (394 lines, .ts) -- import { createHash } from \"node:crypto\";
 - `./src/adapters/windows-principal.ts` (104 lines, .ts) -- import type { IncomingMessage } from \"node:http\";
 - `./src/application/composed-session-service.ts` (134 lines, .ts) -- import type { SessionId } from \"../domain/contracts.js\";
@@ -129,15 +129,3 @@ Files: 128
 - `./tests/sse-events.test.ts` (18 lines, .ts) -- import { describe, expect, it } from \"vitest\";
 - `./tests/support/deterministic-local-ports.ts` (64 lines, .ts) -- import { randomUUID } from \"node:crypto\";
 - `./tests/support/fake-windows-bridge.ts` (114 lines, .ts) -- import { mkdtemp, rm, writeFile } from \"node:fs/promises\";
-- `./tests/support/test-daemon-server.ts` (236 lines, .ts) -- import type { AddressInfo } from \"node:net\";
-- `./tests/transport.test.ts` (52 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/verify-composed-session-handoff.test.ts` (309 lines, .ts) -- import { describe, expect, it, beforeEach, afterEach } from \"vitest\";
-- `./tests/whichllm-artifact-transport.test.ts` (249 lines, .ts) -- import { createHash } from \"node:crypto\";
-- `./tests/windows-integrations.test.ts` (104 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/windows-principal.test.ts` (146 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./vitest.config.ts` (5 lines, .ts) -- import { defineConfig } from \"vitest/config\";
-
-## By language
-- .ts: 65
-- .md: 62
-- .js: 1

@@ -1,7 +1,7 @@
 <!-- ijfw schema:1 codebase-index -->
 # Codebase index
 
-Generated: 2026-09-13T20:35:04Z
+Generated: 2026-09-13T20:25:38Z
 Root: .
 
 Files: 128
@@ -75,69 +75,5 @@ Files: 128
 - `./playwright.config.ts` (22 lines, .ts) -- import { defineConfig, devices } from '@playwright/test';
 - `./src/adapters/boundary.ts` (69 lines, .ts) -- import { timingSafeEqual } from \"node:crypto\";
 - `./src/adapters/contracts.ts` (98 lines, .ts) -- import { z } from \"zod\";
-- `./src/adapters/local-authority-adapters.ts` (373 lines, .ts) -- import type { IdentityEnvelope } from \"../domain/identity.js\";
+- `./src/adapters/local-authority-adapters.ts` (367 lines, .ts) -- import type { IdentityEnvelope } from \"../domain/identity.js\";
 - `./src/adapters/transport.ts` (394 lines, .ts) -- import { createHash } from \"node:crypto\";
-- `./src/adapters/windows-principal.ts` (104 lines, .ts) -- import type { IncomingMessage } from \"node:http\";
-- `./src/application/composed-session-service.ts` (134 lines, .ts) -- import type { SessionId } from \"../domain/contracts.js\";
-- `./src/application/composition-contract.ts` (136 lines, .ts) -- import type { CorrelationId, SessionId } from \"../domain/contracts.js\";
-- `./src/application/composition-root.ts` (182 lines, .ts) -- import { appendFile, mkdir } from \"node:fs/promises\";
-- `./src/application/contract-schemas.ts` (138 lines, .ts) -- import { z } from \"zod\";
-- `./src/application/ports.ts` (29 lines, .ts) -- import type {
-- `./src/application/session-service.ts` (31 lines, .ts) -- import type { AssistantResponse, SessionId } from \"../domain/contracts.js\";
-- `./src/cli.ts` (20 lines, .ts) -- import { loadConfig } from \"./infrastructure/config.js\";
-- `./src/clients/daemon-client.ts` (145 lines, .ts) -- import { z } from \"zod\";
-- `./src/daemon/auth.ts` (22 lines, .ts) -- import type { IncomingMessage } from \"node:http\";
-- `./src/daemon/health.ts` (11 lines, .ts) -- export type HealthStatus = \"ready\" | \"degraded\";
-- `./src/daemon/server.ts` (805 lines, .ts) -- import {
-- `./src/daemon/sse.ts` (36 lines, .ts) -- import type { ServerResponse } from \"node:http\";
-- `./src/domain/contracts.ts` (37 lines, .ts) -- export type CorrelationId = string & { readonly __brand: \"CorrelationId\" };
-- `./src/domain/identity.ts` (53 lines, .ts) -- import { z } from \"zod\";
-- `./src/domain/security.ts` (44 lines, .ts) -- export type Identity = {
-- `./src/domain/state.ts` (29 lines, .ts) -- export type OperationalState =
-- `./src/index.ts` (77 lines, .ts) -- import { createDaemon } from \"./daemon/server.js\";
-- `./src/infrastructure/adapters.ts` (19 lines, .ts) -- import type { ContextPacket, ModelDecision } from \"../domain/contracts.js\";
-- `./src/infrastructure/config.ts` (61 lines, .ts) -- import { z } from \"zod\";
-- `./src/infrastructure/secure-store.ts` (49 lines, .ts) -- import {
-- `./src/infrastructure/session-store.ts` (162 lines, .ts) -- import { DatabaseSync } from \"node:sqlite\";
-- `./src/infrastructure/task-store.ts` (192 lines, .ts) -- import { DatabaseSync } from \"node:sqlite\";
-- `./src/platform/bridge-supervisor.ts` (108 lines, .ts) -- import { spawn, type ChildProcess } from \"node:child_process\";
-- `./src/platform/windows-integrations.ts` (225 lines, .ts) -- import { mkdtemp, rm } from \"node:fs/promises\";
-- `./tests/adapters-contracts.test.ts` (148 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/application-contracts.test.ts` (77 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/auth.test.ts` (34 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/bridge-lifecycle.integration.test.ts` (232 lines, .ts) -- import { mkdtemp, rm } from \"node:fs/promises\";
-- `./tests/bridge-supervisor.test.ts` (163 lines, .ts) -- import { mkdtemp, rm, writeFile } from \"node:fs/promises\";
-- `./tests/browser-ui.test.ts` (88 lines, .ts) -- import { readFile } from \"node:fs/promises\";
-- `./tests/client.test.ts` (84 lines, .ts) -- import { afterAll, describe, expect, it, vi } from \"vitest\";
-- `./tests/composed-session-service.test.ts` (215 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/composition-root.test.ts` (29 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/config.test.ts` (79 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/daemon-persistence.test.ts` (93 lines, .ts) -- import { afterEach, describe, expect, it } from \"vitest\";
-- `./tests/daemon-session-service.test.ts` (150 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/daemon.test.ts` (418 lines, .ts) -- import { afterAll, describe, expect, it } from \"vitest\";
-- `./tests/e2e/model-selection.spec.ts` (272 lines, .ts) -- import { test, expect } from \"@playwright/test\";
-- `./tests/fixture-adapter-matrix.test.ts` (268 lines, .ts) -- import { createServer, type Server } from \"node:http\";
-- `./tests/health.test.ts` (12 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/http-transport.test.ts` (43 lines, .ts) -- import { createServer } from \"node:http\";
-- `./tests/identity.test.ts` (33 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/kb-sync-context-cache-transport.test.ts` (51 lines, .ts) -- import { existsSync } from \"node:fs\";
-- `./tests/local-authority-adapters.test.ts` (224 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/secure-store.test.ts` (71 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/security.test.ts` (19 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/session-service.test.ts` (121 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/session-store-crypto.test.ts` (102 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/sse-events.test.ts` (18 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/support/deterministic-local-ports.ts` (64 lines, .ts) -- import { randomUUID } from \"node:crypto\";
-- `./tests/support/fake-windows-bridge.ts` (114 lines, .ts) -- import { mkdtemp, rm, writeFile } from \"node:fs/promises\";
-- `./tests/support/test-daemon-server.ts` (236 lines, .ts) -- import type { AddressInfo } from \"node:net\";
-- `./tests/transport.test.ts` (52 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/verify-composed-session-handoff.test.ts` (309 lines, .ts) -- import { describe, expect, it, beforeEach, afterEach } from \"vitest\";
-- `./tests/whichllm-artifact-transport.test.ts` (249 lines, .ts) -- import { createHash } from \"node:crypto\";
-- `./tests/windows-integrations.test.ts` (104 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./tests/windows-principal.test.ts` (146 lines, .ts) -- import { describe, expect, it } from \"vitest\";
-- `./vitest.config.ts` (5 lines, .ts) -- import { defineConfig } from \"vitest/config\";
-
-## By language
-- .ts: 65
-- .md: 62
-- .js: 1
