@@ -45,6 +45,11 @@ describe("browser operator console boundary", () => {
     expect(html).toContain("detail.textContent = disclosure");
     expect(html).toContain("hasOwnProperty.call(task, 'response')");
     expect(html).toContain("renderReadiness(result.readiness)");
+    expect(html).toContain("function renderResponseDetails(item, task)");
+    expect(html).toContain("Response disclosure");
+    expect(html).toContain("response?.modelUsed");
+    expect(html).toContain("metadata?.approvalState");
+    expect(html).toContain("metadata?.receiptState");
     expect(html).toContain("prefers-reduced-motion: reduce");
     expect(html).toContain("button:focus-visible");
   });
@@ -59,5 +64,6 @@ describe("browser operator console boundary", () => {
     expect(html).toContain(
       "No live authority or production control is available",
     );
+    expect(html).toContain("response metadata is disclosed below.");
   });
 });
