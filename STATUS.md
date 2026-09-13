@@ -161,3 +161,13 @@ Sub-project 1 of the local-authority build (see `docs/contracts/helix-phase-8-lo
 - Added test coverage for concurrent task ID generation, URL parameter validation, and static asset path traversal prevention.
 - Full local gate passes: build, lint, formatting, docs audit, 29 test files, and 150 tests.
 
+## Model selection & browser E2E invariant defense (2026-09-13)
+
+- Implemented accessible model selection dropdown in `web/index.html` allowing explicit operator model selection across local and cloud providers.
+- Hardened prompt retention invariant: composer prompt text clears ONLY upon confirmed HTTP 201/202 task admission, retaining prompt content across network and model execution failures.
+- Defended zero-automated-cloud-failover invariant: local execution failure preserves prompt in UI without issuing background cloud dispatches; cloud execution requires explicit user dropdown selection and resubmit.
+- Gated all test fixture control routes (`/__fixture/*`) behind `fixtureMode` configuration and verified production daemon isolates and returns HTTP 404 for all fixture endpoints.
+- Added Playwright browser E2E test suite (`tests/e2e/model-selection.spec.ts`) validating 4 scenarios: UI dropdown rendering, prompt retention on failure, zero automated cloud dispatch, and explicit operator resubmit.
+- Full local gate passes: `npm run check` (29 test files, 150 Vitest unit/integration tests, Prettier, ESLint, docs audit) and `npm run test:e2e` (4/4 Playwright tests).
+
+
