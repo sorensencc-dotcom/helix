@@ -16,6 +16,7 @@ const configSchema = z.object({
   kbSyncKnowledgeDbPath: z.string().min(1).optional(),
   sigilExecuteUrl: z.string().url().optional(),
   whichLlmUrl: z.string().url().optional(),
+  whichLlmArtifactPath: z.string().min(1).optional(),
   windowsBridgeUrl: z.string().url(),
   windowsBridgeCommand: z.string().min(1),
 });
@@ -46,5 +47,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): HelixConfig {
       ? { sigilExecuteUrl: env.HELIX_SIGIL_EXECUTE_URL }
       : {}),
     ...(env.HELIX_WHICHLLM_URL ? { whichLlmUrl: env.HELIX_WHICHLLM_URL } : {}),
+    ...(env.HELIX_WHICHLLM_ARTIFACT_PATH
+      ? { whichLlmArtifactPath: env.HELIX_WHICHLLM_ARTIFACT_PATH }
+      : {}),
   });
 }

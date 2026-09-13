@@ -9,6 +9,7 @@ import {
   UnavailableAdapterTransport,
   HttpAdapterTransport,
   KbSyncContextCacheTransport,
+  WhichLlmArtifactTransport,
 } from "../adapters/transport.js";
 import {
   IcfRetrievalAdapter,
@@ -121,9 +122,7 @@ export function createSessionService(
         config.whichLlmUrl,
         (value) => value as never,
       )
-    : new UnavailableAdapterTransport<Record<string, unknown>, unknown>(
-        "WhichLLM",
-      );
+    : new WhichLlmArtifactTransport(config.whichLlmArtifactPath);
   const sigilTransport = config.sigilExecuteUrl
     ? new HttpAdapterTransport<Record<string, unknown>, unknown>(
         config.sigilExecuteUrl,

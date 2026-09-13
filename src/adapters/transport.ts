@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { IdentityEnvelope } from "../domain/identity.js";
@@ -185,6 +186,75 @@ export class KbSyncContextCacheTransport
     } finally {
       db.close();
     }
+  }
+}
+
+const DEFAULT_WHICHLLM_ARTIFACT_PATH =
+  "C:\\dev\\trm\\_integration\\model_selection.json";
+
+const modelSelectionArtifact = z.object({
+  recommendations: z.object({
+    local_muscle_anchor: z.string().min(1),
+  }),
+});
+
+/**
+ * Reads WhichLLM's manually-run BFCL sweep output
+ * (`_integration/model_selection.json`, written by
+ * `scripts/whichllm-bfcl-evaluator.{mjs,py}`) directly. There is no HTTP
+ * authority: the sweep is an operator-triggered script, and this transport
+ * only ever consumes its latest artifact.
+ */
+export class WhichLlmArtifactTransport
+  implements AdapterTransport<Record<string, unknown>, unknown>
+{
+  public constructor(
+    private readonly artifactPath: string = DEFAULT_WHICHLLM_ARTIFACT_PATH,
+  ) {}
+
+  public async send(
+    _request: Record<string, unknown>,
+    _identity: IdentityEnvelope,
+  ): Promise<unknown | AdapterFailure> {
+    let raw: string;
+    try {
+      raw = readFileSync(this.artifactPath, "utf8");
+    } catch {
+      return {
+        status: "failure",
+        code: "UNAVAILABLE",
+        message: `WhichLLM artifact is not available at ${this.artifactPath}.`,
+      };
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return {
+        status: "failure",
+        code: "MALFORMED_RESPONSE",
+        message: "WhichLLM artifact is not valid JSON.",
+      };
+    }
+
+    const artifact = modelSelectionArtifact.safeParse(parsed);
+    if (!artifact.success) {
+      return {
+        status: "failure",
+        code: "MALFORMED_RESPONSE",
+        message:
+          "WhichLLM artifact is missing recommendations.local_muscle_anchor.",
+      };
+    }
+
+    return {
+      contract: "helix-adapter.v1",
+      status: "success",
+      provider: "local",
+      model: artifact.data.recommendations.local_muscle_anchor,
+      cloudEnabled: false,
+    };
   }
 }
 
