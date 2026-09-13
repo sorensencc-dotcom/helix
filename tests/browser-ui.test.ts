@@ -45,6 +45,8 @@ describe("browser operator console boundary", () => {
     expect(html).toContain("detail.textContent = disclosure");
     expect(html).toContain("hasOwnProperty.call(task, 'response')");
     expect(html).toContain("renderReadiness(result.readiness)");
+    expect(html).toContain("prefers-reduced-motion: reduce");
+    expect(html).toContain("button:focus-visible");
   });
 
   it("keeps fixture and read-only claims explicit", async () => {
