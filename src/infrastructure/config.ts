@@ -1,7 +1,12 @@
 import { z } from "zod";
 
 export function isLoopbackHost(value: string): boolean {
-  return value === "127.0.0.1" || value === "localhost" || value === "::1";
+  return (
+    value === "127.0.0.1" ||
+    value === "localhost" ||
+    value === "::1" ||
+    (Boolean(process.env.HELIX_CONTAINER_MODE) && value === "0.0.0.0")
+  );
 }
 
 const configSchema = z.object({
@@ -17,6 +22,7 @@ const configSchema = z.object({
   sigilExecuteUrl: z.string().url().optional(),
   whichLlmUrl: z.string().url().optional(),
   whichLlmArtifactPath: z.string().min(1).optional(),
+  ollamaUrl: z.string().url().default("http://127.0.0.1:11434/api/chat"),
   windowsBridgeUrl: z.string().url(),
   windowsBridgeCommand: z.string().min(1),
 });
@@ -50,5 +56,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): HelixConfig {
     ...(env.HELIX_WHICHLLM_ARTIFACT_PATH
       ? { whichLlmArtifactPath: env.HELIX_WHICHLLM_ARTIFACT_PATH }
       : {}),
+    ...(env.HELIX_OLLAMA_URL ? { ollamaUrl: env.HELIX_OLLAMA_URL } : {}),
   });
 }

@@ -140,7 +140,8 @@ export function createSessionService(
       "claude-3-5-sonnet-20241022",
       "gpt-4o",
     ]);
-  const localResponse = overrides.responses ?? new OllamaResponseAdapter();
+  const localResponse =
+    overrides.responses ?? new OllamaResponseAdapter(config.ollamaUrl);
   const claudeResponse = new CliResponseAdapter(
     "claude",
     createCliResponseRunner(process.env.HELIX_CLAUDE_COMMAND ?? "claude.exe"),
