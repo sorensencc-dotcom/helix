@@ -61,6 +61,12 @@ HELIX_SIGIL_EXECUTE_URL
 HELIX_WHICHLLM_URL
 ```
 
+Response generation uses the local model selected by WhichLLM through Ollama's
+loopback `POST http://127.0.0.1:11434/api/chat` endpoint. Helix sends
+`stream: false`, the selected model, the operator prompt, and retrieved
+context. HTTP failures, timeouts, malformed JSON, or missing `message.content`
+fail closed; Helix never substitutes another model or enables cloud routing.
+
 The local daemon binds to loopback by default. Non-loopback binding is rejected by configuration and at daemon construction.
 
 ## Documentation

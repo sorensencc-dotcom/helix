@@ -157,3 +157,75 @@ export class UnavailableResponseAdapter {
     throw new Error("MODEL_EXECUTION_UNAVAILABLE");
   }
 }
+
+export interface OllamaFetch {
+  (input: string, init?: RequestInit): Promise<Response>;
+}
+
+export class OllamaResponseAdapter {
+  public constructor(
+    private readonly endpoint = "http://127.0.0.1:11434/api/chat",
+    private readonly fetcher: OllamaFetch = (input, init) => fetch(input, init),
+  ) {}
+
+  public async respond(request: ResponseRequest): Promise<ResponseResult> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 120_000);
+    try {
+      const response = await this.fetcher(this.endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          model: request.modelDecision.selectedModel,
+          messages: [
+            {
+              role: "system",
+              content:
+                "Answer plainly. Use supplied context when relevant. Do not claim actions or authority you do not have.",
+            },
+            {
+              role: "user",
+              content: JSON.stringify({
+                request: request.payload,
+                context: request.retrieval.contextPacket,
+              }),
+            },
+          ],
+          stream: false,
+        }),
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error("MODEL_EXECUTION_UNAVAILABLE");
+      const body: unknown = await response.json();
+      if (!body || typeof body !== "object" || Array.isArray(body))
+        throw new Error("MODEL_EXECUTION_INVALID_RESPONSE");
+      const message = (body as { message?: unknown }).message;
+      if (!message || typeof message !== "object" || Array.isArray(message))
+        throw new Error("MODEL_EXECUTION_INVALID_RESPONSE");
+      const content = (message as { content?: unknown }).content;
+      if (typeof content !== "string" || content.length === 0)
+        throw new Error("MODEL_EXECUTION_INVALID_RESPONSE");
+      return {
+        correlationId:
+          `corr_${request.session.sessionId.toLowerCase().replace(/[^a-z0-9-]/g, "-")}` as ResponseResult["correlationId"],
+        answer: content,
+        sourcesUsed: [...request.retrieval.sourcesUsed],
+        modelUsed: request.modelDecision.selectedModel,
+        stateDisclosures: {
+          persistenceMode: request.session.persistenceClass,
+          sourceState: request.retrieval.state,
+          overrideState: request.modelDecision.overrideStatus,
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.startsWith("MODEL_EXECUTION_")
+      )
+        throw error;
+      throw new Error("MODEL_EXECUTION_UNAVAILABLE");
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+}

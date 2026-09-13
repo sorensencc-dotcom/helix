@@ -16,6 +16,7 @@ import {
   WhichLlmSelectionAdapter,
   SigilExecutionAdapter,
   UnavailableResponseAdapter,
+  OllamaResponseAdapter,
 } from "../adapters/local-authority-adapters.js";
 import type {
   LocalCompositionPorts,
@@ -137,7 +138,7 @@ export function createSessionService(
     models:
       overrides.models ??
       new WhichLlmSelectionAdapter(whichTransport, identity),
-    responses: overrides.responses ?? new UnavailableResponseAdapter(),
+    responses: overrides.responses ?? new OllamaResponseAdapter(),
     persistence,
     audit: new AppendOnlyAudit(
       resolve(config.taskDatabasePath, "..", "helix-audit.jsonl"),
