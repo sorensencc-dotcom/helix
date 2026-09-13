@@ -36,16 +36,16 @@ Build the unified foundation for Helix, a local personal AI assistant serving Ir
 
 ## Next action
 
-Obtain concrete ICF, WhichLLM, and Sigil owner protocols before implementing live adapter transport. No live endpoint tests are possible yet — the authority lock records approved URLs but activation is still gated on reachable DNS and Windows-authenticated integration evidence.
+Build `IcfRetrievalAdapter` against kb-sync's real local endpoint and `WhichLlmSelectionAdapter` against the operator's real documented WhichLLM spec; wire local (non-domain) Windows auth against the existing native bridge. See `docs/contracts/helix-phase-8-local-authority-scope.md`.
 
 ## Blockers
 
-- Confirm concrete ICF, WhichLLM, and Sigil adapter protocols before integration work.
-- Supply MSIX signing identity and release channel before packaging work.
+- None external. ICF (kb-sync ops center), WhichLLM (operator-authored spec), and Sigil are all operator-owned systems on this machine — build the adapters, no owner contract to wait on. Sigil identity/receipt mapping still needs authoring (see scope doc appendix).
+- Supply MSIX signing identity and release channel before packaging work (deferred — single-machine local use does not need packaging yet).
 
-## Approval scope (2026-09-12)
+## Scope correction (2026-09-12)
 
-Operator approved `docs/contracts/helix-phase-8-unified-authority-contract-request.md` (commit `3822a6d`) as the official request document to the four owners (Windows HTTP Auth, ICF, Sigil, WhichLLM). This approval covers only: the request document is accepted, existing local implementation fixtures continue as candidates, and owner handoff can proceed. It does not cover: inventing missing mappings, treating existing candidate schemas as authoritative, enabling live adapters, or clearing production release gates. Each owner's protocol (endpoints, schemas, identity rules, receipts, failure behavior, fixtures) still requires separate approval before any of that work proceeds.
+Superseded the earlier four-external-owner delivery-packet framing (`docs/contracts/helix-phase-8-unified-authority-contract-request.md`, commits `3822a6d`, `3d418b0`). That framing was wrong: ICF, WhichLLM, and Sigil are systems the operator already owns on this machine, not external parties to petition, and Windows auth here is local-machine-only (single operator, no domain, foreseeable future is this PC). Corrected scope now lives in `docs/contracts/helix-phase-8-local-authority-scope.md`. Enterprise Windows Integrated Auth (Kerberos/NTLM domain fixtures, multi-machine rotation), MSIX signing, and production release gates remain explicitly out of scope until an actual second machine or domain exists.
 
 ## Audits (2026-09-11)
 
