@@ -120,7 +120,9 @@ export class SigilExecutionAdapter {
       Record<string, unknown>,
       unknown
     >,
-    private readonly identity: (request: { session: SessionContext }) => IdentityEnvelope,
+    private readonly identity: (request: {
+      session: SessionContext;
+    }) => IdentityEnvelope,
   ) {}
 
   public async propose(

@@ -1,0 +1,133 @@
+<!-- ijfw schema:1 codebase-index -->
+# Codebase index
+
+Generated: 2026-09-13T03:11:47Z
+Root: .
+
+Files: 118
+
+## By file
+
+- `./AGENTS.md` (56 lines, .md) -- ijfw_version: 1.3.2
+- `./CLAUDE.md` (32 lines, .md) -- Stack: Node.js / TypeScript
+- `./README.md` (78 lines, .md) -- Helix is a local Windows personal-assistant foundation for governed engineering work. It provides a durable local daemon
+- `./STATUS.md` (151 lines, .md) -- Build the unified foundation for Helix, a local personal AI assistant serving IronLedger and IronCommand Forge.
+- `./dev/authority-stub/README.md` (25 lines, .md) -- Not a real ICF/WhichLLM/Sigil authority. Implements the `helix-adapter.v1`
+- `./dev/authority-stub/daemon-smoke.ts` (133 lines, .ts) -- import { mkdtemp, rm } from \"node:fs/promises\";
+- `./docs/contracts/README.md` (12 lines, .md) -- Status: candidate schemas with operator-approved authority metadata. These schemas are not owner-approved protocol locks
+- `./docs/contracts/helix-phase-8-authority-lock.md` (42 lines, .md) -- | Authority | Operation | Environment label | Approved URL |
+- `./docs/contracts/helix-phase-8-external-adapter-contract-request.md` (83 lines, .md) -- Helix Phase 8 requires authoritative, versioned, deterministic adapter contracts for ICF and Sigil. Helix cannot bind ei
+- `./docs/contracts/helix-phase-8-local-authority-scope.md` (46 lines, .md) -- Get Helix running locally against the real systems it already has, so the operator can use and test it in real operation
+- `./docs/contracts/icf-v1.md` (23 lines, .md) -- Status: Helix candidate specification. It is not an external owner approval or live endpoint contract.
+- `./docs/contracts/sigil-v1.md` (23 lines, .md) -- Status: Helix candidate specification. It is not an external owner approval or live endpoint contract.
+- `./docs/contracts/windows-http-auth-identity-mapping-draft.md` (42 lines, .md) -- This draft defines the proposed identity boundary for Helix local HTTP clients, CLI, browser, ICF, and Sigil.
+- `./docs/superpowers/plans/2026-09-10-helix-phase-8-implementation-plan.md` (71 lines, .md) -- 1. Lock versioned ICF, WhichLLM, and Sigil schemas, fixtures, and failure matrices.
+- `./docs/superpowers/plans/2026-09-10-helix-unified-foundation-implementation-plan.md` (99 lines, .md) -- Build a Windows-first TypeScript modular monolith. Establish contracts and policy before adapters, then wire the daemon,
+- `./docs/superpowers/plans/helix-phase-8-contract-slice-REVIEW.md` (59 lines, .md) -- Reviewed: 2026-09-10
+- `./docs/superpowers/specs/2026-09-10-helix-phase-8-integration-release-readiness-design.md` (90 lines, .md) -- Turn the Phase 1–7 foundation into a verifiable local release by wiring approved ICF, WhichLLM, and Sigil contracts, c
+- `./docs/superpowers/specs/2026-09-10-helix-project-spec.md` (146 lines, .md) -- Helix is a local, personal AI assistant for IronLedger and IronCommand Forge. Helix provides grounded reasoning, plannin
+- `./docs/superpowers/specs/2026-09-10-helix-unified-foundation-design.md` (170 lines, .md) -- Helix is a personal, local-first AI assistant for IronLedger and IronCommand Forge. It runs as a standalone local daemon
+- `./docs/superpowers/specs/2026-09-12-helix-local-operator-ui-spec.md` (116 lines, .md) -- Status: approved for implementation
+- `./eslint.config.js` (15 lines, .js) -- import tseslint from \"@typescript-eslint/eslint-plugin\";
+- `./graft/INDEX.md` (20 lines, .md) -- Small markdown nodes summarising this repo. `grep` any term, symbol, or
+- `./graft/eslint.config.md` (6 lines, .md) -- covers: []
+- `./graft/packaging/validate-manifest.md` (3 lines, .md) -- - parseXml · function · L5-L66 — function parseXml(xml)
+- `./graft/src/adapters/boundary.md` (8 lines, .md) -- - AdapterKind · type · L5-L5 — type AdapterKind = \"icf\" | \"whichllm\" | \"sigil\";
+- `./graft/src/adapters/contracts.md` (7 lines, .md) -- - AdapterFailure · type · L81-L81 — type AdapterFailure = z.infer<typeof failure>;
+- `./graft/src/application/ports.md` (7 lines, .md) -- - RetrievalPort · interface · L7-L9 — interface RetrievalPort
+- `./graft/src/application/session-service.md` (5 lines, .md) -- - SessionService · class · L10-L31 — class SessionService
+- `./graft/src/cli.md` (3 lines, .md) -- _No extracted symbols in this file._
+- `./graft/src/clients/daemon-client.md` (5 lines, .md) -- - DaemonClient · interface · L1-L25 — interface DaemonClient
+- `./graft/src/daemon/auth.md` (5 lines, .md) -- - WindowsPrincipalResolver · interface · L7-L9 — interface WindowsPrincipalResolver
+- `./graft/src/daemon/health.md` (5 lines, .md) -- - HealthStatus · type · L1-L1 — type HealthStatus = \"ready\" | \"degraded\";
+- `./graft/src/daemon/server.md` (7 lines, .md) -- - Task · type · L17-L22 — type Task = { readonly id: string; readonly state: \"QUEUED\" | \"CANCELLED\"; readonly se
+- `./graft/src/daemon/sse.md` (4 lines, .md) -- - SseEvent · type · L2-L2 — type SseEvent = \"delta\" | \"metadata\" | \"error\" | \"done\";
+- `./graft/src/domain/contracts.md` (10 lines, .md) -- - CorrelationId · type · L1-L1 — type CorrelationId = string & { readonly __brand: \"CorrelationId\" };
+- `./graft/src/domain/identity.md` (4 lines, .md) -- - IdentityEnvelope · type · L38-L38 — type IdentityEnvelope = z.infer<typeof identityEnvelope>;
+- `./graft/src/domain/security.md` (6 lines, .md) -- - Identity · type · L1-L5 — type Identity = { readonly windows: string; readonly icf?: string; readonly sigil?: stri
+- `./graft/src/domain/state.md` (4 lines, .md) -- - OperationalState · type · L1-L11 — type OperationalState = | \"READY\" | \"DEGRADED\" | \"QUEUED\" | \"APPROVAL_RE
+- `./graft/src/index.md` (3 lines, .md) -- - shutdown · function · L10-L12 — function shutdown(): void
+- `./graft/src/infrastructure/adapters.md` (5 lines, .md) -- - IcfPort · interface · L2-L5 — interface IcfPort
+- `./graft/src/infrastructure/config.md` (5 lines, .md) -- - isLoopbackHost · function · L3-L5 — function isLoopbackHost(value: string): boolean
+- `./graft/src/infrastructure/secure-store.md` (6 lines, .md) -- - EncryptedRecord · interface · L8-L13 — interface EncryptedRecord
+- `./graft/src/infrastructure/session-store.md` (8 lines, .md) -- - SessionKeyProvider · interface · L9-L11 — interface SessionKeyProvider
+- `./graft/src/infrastructure/task-store.md` (23 lines, .md) -- - StoredTask · type · L3-L8 — type StoredTask = { id: string; state: \"QUEUED\" | \"CANCELLED\"; sessionId: string; 
+- `./graft/tests/adapters-contracts.test.md` (3 lines, .md) -- _No extracted symbols in this file._
+- `./graft/tests/auth.test.md` (3 lines, .md) -- _No extracted symbols in this file._
+- `./graft/tests/client.test.md` (3 lines, .md) -- _No extracted symbols in this file._
+- `./graft/tests/config.test.md` (3 lines, .md) -- _No extracted symbols in this file._
+- `./graft/tests/daemon-persistence.test.md` (3 lines, .md) -- _No extracted symbols in this file._
+- `./graft/tests/daemon.test.md` (3 lines, .md) -- _No extracted symbols in this file._
+- `./graft/tests/health.test.md` (3 lines, .md) -- _No extracted symbols in this file._
+- `./graft/tests/identity.test.md` (3 lines, .md) -- _No extracted symbols in this file._
+- `./graft/tests/secure-store.test.md` (3 lines, .md) -- _No extracted symbols in this file._
+- `./graft/tests/security.test.md` (3 lines, .md) -- _No extracted symbols in this file._
+- `./graft/vitest.config.md` (6 lines, .md) -- covers: []
+- `./native/windows-bridge/README.md` (59 lines, .md) -- The bridge terminates Windows Integrated Authentication with `HttpListener` and
+- `./packaging/README.md` (3 lines, .md) -- Phase 8 adds an explicitly unsigned AppX manifest. Run `npm run package:validate` to validate metadata. MSIX identity, c
+- `./src/adapters/boundary.ts` (69 lines, .ts) -- import { timingSafeEqual } from \"node:crypto\";
+- `./src/adapters/contracts.ts` (97 lines, .ts) -- import { z } from \"zod\";
+- `./src/adapters/local-authority-adapters.ts` (159 lines, .ts) -- import type { IdentityEnvelope } from \"../domain/identity.js\";
+- `./src/adapters/transport.ts` (284 lines, .ts) -- import { readFileSync } from \"node:fs\";
+- `./src/adapters/windows-principal.ts` (104 lines, .ts) -- import type { IncomingMessage } from \"node:http\";
+- `./src/application/composed-session-service.ts` (134 lines, .ts) -- import type { SessionId } from \"../domain/contracts.js\";
+- `./src/application/composition-contract.ts` (136 lines, .ts) -- import type { CorrelationId, SessionId } from \"../domain/contracts.js\";
+- `./src/application/composition-root.ts` (151 lines, .ts) -- import { appendFile, mkdir } from \"node:fs/promises\";
+- `./src/application/contract-schemas.ts` (129 lines, .ts) -- import { z } from \"zod\";
+- `./src/application/ports.ts` (29 lines, .ts) -- import type {
+- `./src/application/session-service.ts` (31 lines, .ts) -- import type { AssistantResponse, SessionId } from \"../domain/contracts.js\";
+- `./src/cli.ts` (20 lines, .ts) -- import { loadConfig } from \"./infrastructure/config.js\";
+- `./src/clients/daemon-client.ts` (145 lines, .ts) -- import { z } from \"zod\";
+- `./src/daemon/auth.ts` (22 lines, .ts) -- import type { IncomingMessage } from \"node:http\";
+- `./src/daemon/health.ts` (11 lines, .ts) -- export type HealthStatus = \"ready\" | \"degraded\";
+- `./src/daemon/server.ts` (590 lines, .ts) -- import {
+- `./src/daemon/sse.ts` (36 lines, .ts) -- import type { ServerResponse } from \"node:http\";
+- `./src/domain/contracts.ts` (37 lines, .ts) -- export type CorrelationId = string & { readonly __brand: \"CorrelationId\" };
+- `./src/domain/identity.ts` (53 lines, .ts) -- import { z } from \"zod\";
+- `./src/domain/security.ts` (44 lines, .ts) -- export type Identity = {
+- `./src/domain/state.ts` (29 lines, .ts) -- export type OperationalState =
+- `./src/index.ts` (57 lines, .ts) -- import { createDaemon } from \"./daemon/server.js\";
+- `./src/infrastructure/adapters.ts` (19 lines, .ts) -- import type { ContextPacket, ModelDecision } from \"../domain/contracts.js\";
+- `./src/infrastructure/config.ts` (54 lines, .ts) -- import { z } from \"zod\";
+- `./src/infrastructure/secure-store.ts` (49 lines, .ts) -- import {
+- `./src/infrastructure/session-store.ts` (162 lines, .ts) -- import { DatabaseSync } from \"node:sqlite\";
+- `./src/infrastructure/task-store.ts` (192 lines, .ts) -- import { DatabaseSync } from \"node:sqlite\";
+- `./src/platform/bridge-supervisor.ts` (108 lines, .ts) -- import { spawn, type ChildProcess } from \"node:child_process\";
+- `./src/platform/windows-integrations.ts` (209 lines, .ts) -- import { mkdtemp, rm } from \"node:fs/promises\";
+- `./tests/adapters-contracts.test.ts` (148 lines, .ts) -- import { describe, expect, it } from \"vitest\";
+- `./tests/application-contracts.test.ts` (77 lines, .ts) -- import { describe, expect, it } from \"vitest\";
+- `./tests/auth.test.ts` (34 lines, .ts) -- import { describe, expect, it } from \"vitest\";
+- `./tests/bridge-lifecycle.integration.test.ts` (232 lines, .ts) -- import { mkdtemp, rm } from \"node:fs/promises\";
+- `./tests/bridge-supervisor.test.ts` (163 lines, .ts) -- import { mkdtemp, rm, writeFile } from \"node:fs/promises\";
+- `./tests/browser-ui.test.ts` (73 lines, .ts) -- import { readFile } from \"node:fs/promises\";
+- `./tests/client.test.ts` (84 lines, .ts) -- import { afterAll, describe, expect, it, vi } from \"vitest\";
+- `./tests/composed-session-service.test.ts` (215 lines, .ts) -- import { describe, expect, it } from \"vitest\";
+- `./tests/composition-root.test.ts` (29 lines, .ts) -- import { describe, expect, it } from \"vitest\";
+- `./tests/config.test.ts` (79 lines, .ts) -- import { describe, expect, it } from \"vitest\";
+- `./tests/daemon-persistence.test.ts` (93 lines, .ts) -- import { afterEach, describe, expect, it } from \"vitest\";
+- `./tests/daemon-session-service.test.ts` (150 lines, .ts) -- import { describe, expect, it } from \"vitest\";
+- `./tests/daemon.test.ts` (327 lines, .ts) -- import { afterAll, describe, expect, it } from \"vitest\";
+- `./tests/fixture-adapter-matrix.test.ts` (268 lines, .ts) -- import { createServer, type Server } from \"node:http\";
+- `./tests/health.test.ts` (12 lines, .ts) -- import { describe, expect, it } from \"vitest\";
+- `./tests/http-transport.test.ts` (43 lines, .ts) -- import { createServer } from \"node:http\";
+- `./tests/identity.test.ts` (33 lines, .ts) -- import { describe, expect, it } from \"vitest\";
+- `./tests/kb-sync-context-cache-transport.test.ts` (51 lines, .ts) -- import { existsSync } from \"node:fs\";
+- `./tests/local-authority-adapters.test.ts` (174 lines, .ts) -- import { describe, expect, it } from \"vitest\";
+- `./tests/secure-store.test.ts` (71 lines, .ts) -- import { describe, expect, it } from \"vitest\";
+- `./tests/security.test.ts` (19 lines, .ts) -- import { describe, expect, it } from \"vitest\";
+- `./tests/session-service.test.ts` (121 lines, .ts) -- import { describe, expect, it } from \"vitest\";
+- `./tests/session-store-crypto.test.ts` (102 lines, .ts) -- import { describe, expect, it } from \"vitest\";
+- `./tests/sse-events.test.ts` (18 lines, .ts) -- import { describe, expect, it } from \"vitest\";
+- `./tests/support/deterministic-local-ports.ts` (64 lines, .ts) -- import { randomUUID } from \"node:crypto\";
+- `./tests/support/fake-windows-bridge.ts` (114 lines, .ts) -- import { mkdtemp, rm, writeFile } from \"node:fs/promises\";
+- `./tests/transport.test.ts` (52 lines, .ts) -- import { describe, expect, it } from \"vitest\";
+- `./tests/verify-composed-session-handoff.test.ts` (309 lines, .ts) -- import { describe, expect, it, beforeEach, afterEach } from \"vitest\";
+- `./tests/whichllm-artifact-transport.test.ts` (75 lines, .ts) -- import { mkdtempSync, writeFileSync } from \"node:fs\";
+- `./tests/windows-integrations.test.ts` (104 lines, .ts) -- import { describe, expect, it } from \"vitest\";
+- `./tests/windows-principal.test.ts` (146 lines, .ts) -- import { describe, expect, it } from \"vitest\";
+- `./vitest.config.ts` (5 lines, .ts) -- import { defineConfig } from \"vitest/config\";
+
+## By language
+- .ts: 62
+- .md: 55
+- .js: 1

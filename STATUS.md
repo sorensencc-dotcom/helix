@@ -139,10 +139,13 @@ Fixed two bugs found by the restart-recovery test: (1) `BridgeSupervisor`'s `chi
 
 Sub-project 1 of the local-authority build (see `docs/contracts/helix-phase-8-local-authority-scope.md`) is done: `KbSyncContextCacheTransport` (`src/adapters/transport.ts`) reads kb-sync's live SQLite FTS5 context cache (`.kb_cache/knowledge.db`) directly, and the composition root (`src/application/composition-root.ts`) now defaults the ICF port to it instead of `UnavailableAdapterTransport`. `HELIX_ICF_RESOLVE_URL` still takes precedence if a real HTTP authority ever exists; `HELIX_KB_SYNC_DB_PATH` overrides the cache path. Commits `db83bcb`, `1a9561f`. Full suite green (135/135). Next: WhichLLM adapter (sub-project 2), then local auth wiring (sub-project 3).
 
-## WhichLLM adapter wired to real local authority (2026-09-12)
+## GUI next-phase execution (2026-09-12)
 
-Sub-project 2 of the local-authority build is done: `WhichLlmArtifactTransport` (`src/adapters/transport.ts`) reads the operator-triggered BFCL sweep artifact (`_integration/model_selection.json`, written by `scripts/whichllm-bfcl-evaluator.{mjs,py}`) directly -- no HTTP authority exists for WhichLLM. Maps `recommendations.local_muscle_anchor` to the adapter's `model` field (`provider: "local"`, `cloudEnabled: false`, matching the adapter's current request shape). Missing or malformed artifact fails closed (`UNAVAILABLE` / `MALFORMED_RESPONSE`), no silent fallback model. Composition root defaults the WhichLLM port to it instead of `UnavailableAdapterTransport`; `HELIX_WHICHLLM_URL` still takes precedence if a real HTTP authority ever exists, `HELIX_WHICHLLM_ARTIFACT_PATH` overrides the artifact path (default `C:\dev\trm\_integration\model_selection.json`, the only confirmed live artifact). Full suite green (139/139). Next: local auth wiring (sub-project 3).
-
-## Local-authority build closed: sub-project 3 already shipped (2026-09-12)
-
-Sub-project 3 (local Windows auth wiring) turned out already done, ahead of sub-project 1/2: `src/index.ts` wires `BridgeSupervisor` (spawns `native/windows-bridge`), `CurlNegotiateFetch` (Negotiate/SSPI via `curl.exe --negotiate`), `WindowsBridgePrincipalResolver` (`GET /v1/principal`), and `WindowsBridgeCryptoProvider` (DPAPI encrypt/decrypt over the bridge) -- landed in commits `db855e7`, `a8a40fd` before this session's ICF/WhichLLM work started. `WindowsDpapiSessionKeyProvider`/`NativeDpapiBridge` in `src/platform/windows-integrations.ts` is dead code from a superseded in-process-DPAPI design (`getOrCreateSessionKey`/`deleteSessionKey` still throw `DPAPI_KEY_STORAGE_UNIMPLEMENTED`), never referenced outside its own file and test -- safe to leave or remove later, not on the daemon's live path. All 3 sub-projects of the Phase 8 local-adapter build (`docs/contracts/helix-phase-8-local-authority-scope.md`) are now closed: ICF, WhichLLM, and local auth all resolve against real local authorities with fail-closed behavior on missing/bad data.
+- Manual approval received for the Helix GUI next-phase plan.
+- Locked response disclosure contracts in `src/application/composition-contract.ts` and `src/application/composed-session-service.ts`; committed as `a829bbe`.
+- Added GUI disclosure rendering and browser-boundary assertions for model decision, effective scope, source state, lineage, governance, persistence, override, approval, and receipt state; committed as `f02246f`.
+- Fixed formatter gate failure in `src/adapters/local-authority-adapters.ts`.
+- Full local gate passes: build, lint, formatting, docs audit, package validation, 27 test files, and 132 tests.
+- Added `.npmignore` to prevent `.ijfw/`, `AGENTS.md`, and `CLAUDE.md` from entering npm packages. Dry-run confirmed zero internal metadata entries.
+- Focused security/browser checks pass: 7 tests.
+- Live authority, signed MSIX, clean-machine lifecycle, remote delivery, and production approval remain unverified.

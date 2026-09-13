@@ -1,0 +1,8 @@
+[2026-09-12T01:18:50.155Z] start: host=claude-code, reason=session_end, project=C:/dev/helix
+[2026-09-12T01:18:50.159Z] journal: 1 entries across 1 sessions
+[2026-09-12T01:18:50.247Z] tier-promotion: working->episodic={"skipped":"session_id absent"} episodic->semantic={"promoted":0,"errors":[],"superseded":[]} working->procedural={"promoted":0,"errors":[]}
+[2026-09-12T01:18:50.247Z] staleness-wiring: no Episodic->Semantic supersessions this cycle -- skip
+[2026-09-12T01:18:50.257Z] wiki-compile: processed=0 pages=0 facts=0 budgetExhausted=false
+[2026-09-12T01:18:50.280Z] profile_derive: merged delta (style=4 feedback=0 inferences=0)
+[2026-09-12T01:18:50.284Z] mark-completed: ok
+[2026-09-12T01:18:50.288Z] end: completed=5 failed=0
