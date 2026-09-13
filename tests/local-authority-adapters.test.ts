@@ -4,6 +4,7 @@ import {
   SigilExecutionAdapter,
   UnavailableResponseAdapter,
   WhichLlmSelectionAdapter,
+  CliResponseAdapter,
 } from "../src/adapters/local-authority-adapters.js";
 import { UnavailableAdapterTransport } from "../src/adapters/transport.js";
 import type { IdentityEnvelope } from "../src/domain/identity.js";
@@ -170,5 +171,54 @@ describe("local authority adapters", () => {
     expect(result.selectedModel).toBe("claude-3-5-sonnet");
     expect(result.overrideStatus).toBe("auto");
     expect(result.availableModels).toContain("claude-3-5-sonnet");
+  });
+
+  it("authorizes explicit configured provider models without automatic fallback", async () => {
+    const adapter = new WhichLlmSelectionAdapter(transport, () => identity, [
+      "claude-3-5-sonnet-20241022",
+      "gpt-4o",
+    ]);
+    await expect(
+      adapter.select({
+        session,
+        retrieval: { contextPacket: null, sourcesUsed: [], state: "success" },
+        requestedModel: "gpt-4o",
+      }),
+    ).resolves.toMatchObject({
+      selectedModel: "gpt-4o",
+      overrideStatus: "operator",
+    });
+    await expect(
+      adapter.select({
+        session,
+        retrieval: { contextPacket: null, sourcesUsed: [], state: "success" },
+        requestedModel: "grok-2",
+      }),
+    ).rejects.toThrow("UNAVAILABLE");
+  });
+
+  it("routes CLI provider response through its exact runner contract", async () => {
+    let args: readonly string[] = [];
+    const adapter = new CliResponseAdapter("claude", async (received) => {
+      args = received;
+      return "answer";
+    });
+    const result = await adapter.respond({
+      session,
+      retrieval: {
+        contextPacket: { source: "x" },
+        sourcesUsed: [],
+        state: "success",
+      },
+      modelDecision: {
+        selectedModel: "claude-3-5-sonnet-20241022",
+        availableModels: ["claude-3-5-sonnet-20241022"],
+        reason: "operator",
+        overrideStatus: "operator",
+      },
+      payload: { instruction: "hello" },
+    });
+    expect(args).toContain("--no-session-persistence");
+    expect(result.answer).toBe("answer");
   });
 });

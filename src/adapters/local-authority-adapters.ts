@@ -1,4 +1,5 @@
 import type { IdentityEnvelope } from "../domain/identity.js";
+import { spawn } from "node:child_process";
 import type {
   ModelSelectionDecision,
   ModelSelectionRequest,
@@ -76,11 +77,23 @@ export class WhichLlmSelectionAdapter {
       unknown
     >,
     private readonly identity: IdentityProvider,
+    private readonly explicitModels: readonly string[] = [],
   ) {}
 
   public async select(
     request: ModelSelectionRequest,
   ): Promise<ModelSelectionDecision> {
+    if (
+      request.requestedModel &&
+      this.explicitModels.includes(request.requestedModel)
+    ) {
+      return {
+        selectedModel: request.requestedModel,
+        availableModels: [...this.explicitModels],
+        reason: "explicit_authenticated_provider",
+        overrideStatus: "operator",
+      };
+    }
     const identity = this.identity(request);
     const candidate = whichLlmRequest.safeParse({
       contract: "helix-adapter.v1",
@@ -236,5 +249,102 @@ export class OllamaResponseAdapter {
     } finally {
       clearTimeout(timer);
     }
+  }
+}
+
+export type CliResponseRunner = (args: readonly string[]) => Promise<string>;
+
+export function createCliResponseRunner(
+  command: string,
+  timeoutMs = 120_000,
+): CliResponseRunner {
+  return (args) =>
+    new Promise((resolve, reject) => {
+      const child = spawn(command, args, {
+        windowsHide: true,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      let stdout = "";
+      let stderr = "";
+      const timer = setTimeout(() => {
+        child.kill();
+        reject(new Error("MODEL_EXECUTION_TIMEOUT"));
+      }, timeoutMs);
+      child.stdout.on("data", (chunk) => {
+        stdout += String(chunk);
+      });
+      child.stderr.on("data", (chunk) => {
+        stderr += String(chunk);
+      });
+      child.once("error", () => {
+        clearTimeout(timer);
+        reject(new Error("MODEL_EXECUTION_UNAVAILABLE"));
+      });
+      child.once("close", (code) => {
+        clearTimeout(timer);
+        if (code !== 0) return reject(new Error("MODEL_EXECUTION_UNAVAILABLE"));
+        try {
+          const parsed: unknown = JSON.parse(stdout);
+          if (
+            !parsed ||
+            typeof parsed !== "object" ||
+            typeof (parsed as { result?: unknown }).result !== "string"
+          )
+            return reject(new Error("MODEL_EXECUTION_INVALID_RESPONSE"));
+          resolve((parsed as { result: string }).result);
+        } catch {
+          void stderr;
+          reject(new Error("MODEL_EXECUTION_INVALID_RESPONSE"));
+        }
+      });
+    });
+}
+
+export class CliResponseAdapter {
+  public constructor(
+    private readonly provider: "claude" | "codex",
+    private readonly runner: CliResponseRunner,
+  ) {}
+
+  public async respond(request: ResponseRequest): Promise<ResponseResult> {
+    const prompt = JSON.stringify({
+      request: request.payload,
+      context: request.retrieval.contextPacket,
+    });
+    const args =
+      this.provider === "claude"
+        ? [
+            "-p",
+            prompt,
+            "--model",
+            request.modelDecision.selectedModel,
+            "--output-format",
+            "json",
+            "--no-session-persistence",
+            "--permission-prompts",
+            "none",
+          ]
+        : [
+            "exec",
+            "--ephemeral",
+            "--sandbox",
+            "read-only",
+            "--model",
+            request.modelDecision.selectedModel,
+            prompt,
+          ];
+    const answer = await this.runner(args);
+    return {
+      correlationId:
+        `corr_${request.session.sessionId.toLowerCase().replace(/[^a-z0-9-]/g, "-")}` as ResponseResult["correlationId"],
+      answer,
+      sourcesUsed: [...request.retrieval.sourcesUsed],
+      modelUsed: request.modelDecision.selectedModel,
+      stateDisclosures: {
+        persistenceMode: request.session.persistenceClass,
+        sourceState: request.retrieval.state,
+        overrideState: request.modelDecision.overrideStatus,
+      },
+    };
   }
 }

@@ -17,6 +17,8 @@ import {
   SigilExecutionAdapter,
   UnavailableResponseAdapter,
   OllamaResponseAdapter,
+  CliResponseAdapter,
+  createCliResponseRunner,
 } from "../adapters/local-authority-adapters.js";
 import type {
   LocalCompositionPorts,
@@ -132,13 +134,37 @@ export function createSessionService(
     : new UnavailableAdapterTransport<Record<string, unknown>, unknown>(
         "Sigil",
       );
+  const models =
+    overrides.models ??
+    new WhichLlmSelectionAdapter(whichTransport, identity, [
+      "claude-3-5-sonnet-20241022",
+      "gpt-4o",
+    ]);
+  const localResponse = overrides.responses ?? new OllamaResponseAdapter();
+  const claudeResponse = new CliResponseAdapter(
+    "claude",
+    createCliResponseRunner(process.env.HELIX_CLAUDE_COMMAND ?? "claude.exe"),
+  );
+  const codexResponse = new CliResponseAdapter(
+    "codex",
+    createCliResponseRunner(process.env.HELIX_CODEX_COMMAND ?? "codex.cmd"),
+  );
+  const responses = overrides.responses ?? {
+    async respond(
+      request: Parameters<LocalCompositionPorts["responses"]["respond"]>[0],
+    ) {
+      if (request.modelDecision.selectedModel.startsWith("claude-"))
+        return claudeResponse.respond(request);
+      if (request.modelDecision.selectedModel === "gpt-4o")
+        return codexResponse.respond(request);
+      return localResponse.respond(request);
+    },
+  };
   const ports: LocalCompositionPorts = {
     retrieval:
       overrides.retrieval ?? new IcfRetrievalAdapter(icfTransport, identity),
-    models:
-      overrides.models ??
-      new WhichLlmSelectionAdapter(whichTransport, identity),
-    responses: overrides.responses ?? new OllamaResponseAdapter(),
+    models,
+    responses,
     persistence,
     audit: new AppendOnlyAudit(
       resolve(config.taskDatabasePath, "..", "helix-audit.jsonl"),
