@@ -1,6 +1,7 @@
 import type { SessionId } from "../domain/contracts.js";
 import type {
   AuditEvent,
+  EffectiveScope,
   ModelSelectionDecision,
   ModelSelectionRequest,
   PersistenceRequest,
@@ -8,10 +9,15 @@ import type {
   RequestEnvelope,
   ResponseRequest,
   ResponseResult,
+  ResponseDisclosure,
   RetrievalRequest,
   RetrievalResponse,
   SessionContext,
 } from "./composition-contract.js";
+import {
+  daemonResponseSchema,
+  responseResultSchema,
+} from "./contract-schemas.js";
 
 export interface LocalCompositionPorts {
   readonly retrieval: {
@@ -30,6 +36,7 @@ export interface LocalCompositionPorts {
 }
 
 export interface DaemonResponse {
+  readonly correlationId: ResponseResult["correlationId"];
   readonly answer: unknown;
   readonly sourcesUsed: readonly string[];
   readonly modelUsed: string;
@@ -38,6 +45,9 @@ export interface DaemonResponse {
   readonly governanceState: SessionContext["governanceState"];
   readonly persistenceMode: SessionContext["persistenceClass"];
   readonly proposedActions?: readonly unknown[] | undefined;
+  readonly modelDecision: ModelSelectionDecision;
+  readonly effectiveScope: EffectiveScope;
+  readonly responseDisclosure: ResponseDisclosure;
   readonly queuedState?: string | undefined;
 }
 
@@ -67,12 +77,14 @@ export class ComposedSessionService {
       retrieval,
       requestedModel: envelope.requestedModel,
     });
-    const result = await this.ports.responses.respond({
-      session,
-      retrieval,
-      modelDecision: decision,
-      payload: envelope.payload,
-    });
+    const result = responseResultSchema.parse(
+      await this.ports.responses.respond({
+        session,
+        retrieval,
+        modelDecision: decision,
+        payload: envelope.payload,
+      }),
+    ) as unknown as ResponseResult;
     const persistence = await this.ports.persistence.save({
       session,
       response: result,
@@ -87,7 +99,8 @@ export class ComposedSessionService {
       persistenceState: persistence,
       proposedActions: result.proposedActions,
     });
-    return {
+    return daemonResponseSchema.parse({
+      correlationId: result.correlationId,
       answer: result.answer,
       sourcesUsed: result.sourcesUsed,
       modelUsed: result.modelUsed,
@@ -96,6 +109,26 @@ export class ComposedSessionService {
       governanceState: session.governanceState,
       persistenceMode: session.persistenceClass,
       proposedActions: result.proposedActions,
-    };
+      modelDecision: decision,
+      effectiveScope: {
+        governanceState: session.governanceState,
+        sourceSelection:
+          envelope.requestedSources === undefined ? "automatic" : "constrained",
+        ...(envelope.requestedSources === undefined
+          ? {}
+          : { requestedSources: [...envelope.requestedSources] }),
+        sourcesUsed: [...retrieval.sourcesUsed],
+        sourceState: retrieval.state,
+      },
+      responseDisclosure: {
+        governed: session.governanceState === "governed",
+        governanceState: session.governanceState,
+        persistenceMode: session.persistenceClass,
+        sourceState: result.stateDisclosures.sourceState,
+        overrideState: result.stateDisclosures.overrideState,
+        sourcesUsed: [...result.sourcesUsed],
+        ...(result.lineageId ? { lineageId: result.lineageId } : {}),
+      },
+    }) as unknown as DaemonResponse;
   }
 }

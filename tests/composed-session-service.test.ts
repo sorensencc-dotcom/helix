@@ -83,9 +83,31 @@ describe("ComposedSessionService", () => {
     });
 
     await expect(service.respond(envelope, session)).resolves.toMatchObject({
+      correlationId: "corr_fixture",
       answer: "answer",
       modelUsed: "fixture-model",
       persistenceMode: "encrypted-sqlite",
+      modelDecision: {
+        selectedModel: "fixture-model",
+        availableModels: ["fixture-model"],
+        reason: "operator",
+        overrideStatus: "operator",
+      },
+      effectiveScope: {
+        governanceState: "ordinary",
+        sourceSelection: "constrained",
+        requestedSources: ["fixture:source"],
+        sourcesUsed: ["fixture:source"],
+        sourceState: "success",
+      },
+      responseDisclosure: {
+        governed: false,
+        governanceState: "ordinary",
+        persistenceMode: "encrypted-sqlite",
+        sourceState: "success",
+        overrideState: "operator",
+        sourcesUsed: ["fixture:source"],
+      },
     });
     expect(calls).toEqual([
       "retrieval",
@@ -139,5 +161,55 @@ describe("ComposedSessionService", () => {
       "RETRIEVAL_FAIL_CLOSED",
     );
     expect(calls).toEqual(["retrieval"]);
+  });
+
+  it("rejects malformed response contracts before persistence or audit", async () => {
+    const calls: string[] = [];
+    const service = new ComposedSessionService({
+      retrieval: {
+        retrieve: async () => ({
+          contextPacket: { text: "context" },
+          sourcesUsed: ["fixture:source"],
+          state: "success" as const,
+        }),
+      },
+      models: {
+        select: async () => ({
+          selectedModel: "fixture-model",
+          availableModels: ["fixture-model"],
+          reason: "authority",
+          overrideStatus: "auto" as const,
+        }),
+      },
+      responses: {
+        respond: async () =>
+          ({
+            correlationId: "corr_fixture",
+            answer: "answer",
+            sourcesUsed: ["fixture:source"],
+            modelUsed: "fixture-model",
+            stateDisclosures: {
+              persistenceMode: "encrypted-sqlite",
+              sourceState: "success",
+              overrideState: "auto",
+              unexpected: true,
+            },
+          }) as never,
+      },
+      persistence: {
+        save: async () => {
+          calls.push("persistence");
+          return { stored: true };
+        },
+      },
+      audit: {
+        record: async () => {
+          calls.push("audit");
+        },
+      },
+    });
+
+    await expect(service.respond(envelope, session)).rejects.toThrow();
+    expect(calls).toEqual([]);
   });
 });

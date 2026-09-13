@@ -91,6 +91,20 @@ describe("daemon task route with a wired ComposedSessionService", () => {
       expect(body.response).toMatchObject({
         answer: "answer",
         modelUsed: "fixture-model",
+        modelDecision: {
+          selectedModel: "fixture-model",
+          overrideStatus: "operator",
+        },
+        effectiveScope: {
+          governanceState: "ordinary",
+          sourceSelection: "automatic",
+          sourcesUsed: ["fixture:source"],
+        },
+        responseDisclosure: {
+          governed: false,
+          governanceState: "ordinary",
+          sourcesUsed: ["fixture:source"],
+        },
       });
       expect(body.metadata).toMatchObject({
         taskId: body.id,

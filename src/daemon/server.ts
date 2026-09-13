@@ -25,6 +25,7 @@ import type {
   TaskMetadata,
   WindowsOperator,
 } from "../application/composition-contract.js";
+import { daemonResponseSchema } from "../application/contract-schemas.js";
 import type { SessionId } from "../domain/contracts.js";
 
 const maxBodyBytes = 64 * 1024;
@@ -434,16 +435,17 @@ export function createDaemon(
             timestamp: new Date().toISOString(),
           };
           try {
-            const daemonResponse = await options.sessionService.respond(
-              envelope,
-              session,
+            const daemonResponse = daemonResponseSchema.parse(
+              await options.sessionService.respond(envelope, session),
             );
             const metadata: TaskMetadata = {
               taskId: id,
               sessionId,
               operator,
               proposedAction: daemonResponse.proposedActions?.[0],
-              approvalState: "not-required",
+              approvalState: daemonResponse.proposedActions?.length
+                ? "unknown"
+                : "not-required",
               receiptState:
                 daemonResponse.persistenceMode === "ram-only"
                   ? "unpersisted"
@@ -468,7 +470,7 @@ export function createDaemon(
               sessionId,
               operator,
               proposedAction: undefined,
-              approvalState: "denied",
+              approvalState: "unknown",
               receiptState: "unpersisted",
             };
             const failed: StoredTask = {

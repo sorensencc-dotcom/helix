@@ -4,6 +4,9 @@ export type GovernanceScope = "ordinary" | "governed";
 export type ClientType = "CLI" | "Browser" | "HTTP";
 export type RetrievalState = "success" | "degraded" | "fail-closed";
 export type OverrideStatus = "auto" | "operator";
+export type ApprovalState =
+  "not-required" | "approval-required" | "denied" | "unknown";
+export type ReceiptState = "persisted" | "unpersisted" | "unknown";
 
 export interface RequestEnvelope {
   readonly id: string;
@@ -77,10 +80,28 @@ export interface ResponseResult {
   readonly confidence?: number | undefined;
   readonly lineageId?: string | undefined;
   readonly stateDisclosures: {
-    readonly persistenceMode: string;
+    readonly persistenceMode: SessionContext["persistenceClass"];
     readonly sourceState: RetrievalState;
     readonly overrideState: OverrideStatus;
   };
+}
+
+export interface EffectiveScope {
+  readonly governanceState: GovernanceScope;
+  readonly sourceSelection: "automatic" | "constrained";
+  readonly requestedSources?: readonly string[] | undefined;
+  readonly sourcesUsed: readonly string[];
+  readonly sourceState: RetrievalState;
+}
+
+export interface ResponseDisclosure {
+  readonly governed: boolean;
+  readonly governanceState: GovernanceScope;
+  readonly persistenceMode: SessionContext["persistenceClass"];
+  readonly sourceState: RetrievalState;
+  readonly overrideState: OverrideStatus;
+  readonly sourcesUsed: readonly string[];
+  readonly lineageId?: string | undefined;
 }
 
 export interface TaskMetadata {
@@ -88,8 +109,8 @@ export interface TaskMetadata {
   readonly sessionId: SessionId;
   readonly operator: WindowsOperator;
   readonly proposedAction: unknown;
-  readonly approvalState: string;
-  readonly receiptState: string;
+  readonly approvalState: ApprovalState;
+  readonly receiptState: ReceiptState;
   readonly sigilReference?: unknown | undefined;
 }
 

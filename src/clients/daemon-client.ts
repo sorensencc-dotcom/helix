@@ -1,3 +1,8 @@
+import { z } from "zod";
+import { storedTaskSchema } from "../application/contract-schemas.js";
+
+type DaemonTask = z.infer<typeof storedTaskSchema>;
+
 export interface DaemonClient {
   status(): Promise<{
     status: string;
@@ -18,21 +23,9 @@ export interface DaemonClient {
     sessionId: string,
     instruction: string,
     idempotencyKey?: string,
-  ): Promise<{ id: string; state: string; sessionId: string }>;
-  getTask(id: string): Promise<{
-    id: string;
-    state: string;
-    sessionId: string;
-    correlationId: string;
-    response?: unknown;
-    metadata?: unknown;
-  }>;
-  cancelTask(id: string): Promise<{
-    id: string;
-    state: string;
-    sessionId: string;
-    correlationId: string;
-  }>;
+  ): Promise<DaemonTask>;
+  getTask(id: string): Promise<DaemonTask>;
+  cancelTask(id: string): Promise<DaemonTask>;
   openStream(lastEventId?: number): Promise<{
     events: Array<{ event: string; data: unknown; id?: number }>;
   }>;
@@ -88,20 +81,20 @@ export function createDaemonClient(baseUrl: string): DaemonClient {
           },
           body: JSON.stringify({ sessionId, instruction }),
         },
-        taskSchema,
+        storedTaskSchema,
       ),
-    getTask: (id) => request(baseUrl, `/v1/tasks/${id}`, undefined, taskSchema),
+    getTask: (id) =>
+      request(baseUrl, `/v1/tasks/${id}`, undefined, storedTaskSchema),
     cancelTask: (id) =>
       request(
         baseUrl,
         `/v1/tasks/${id}/cancel`,
         { method: "POST" },
-        taskSchema,
+        storedTaskSchema,
       ),
     openStream: (lastEventId) => readStream(baseUrl, lastEventId),
   };
 }
-import { z } from "zod";
 
 const statusSchema = z
   .object({
@@ -123,16 +116,6 @@ const sessionSchema = z
   .strict();
 const sessionsSchema = z
   .object({ sessions: z.array(z.string().min(1)) })
-  .strict();
-const taskSchema = z
-  .object({
-    id: z.string().min(1),
-    state: z.enum(["QUEUED", "CANCELLED", "COMPLETED", "FAILED"]),
-    sessionId: z.string().min(1),
-    correlationId: z.string().min(1),
-    response: z.unknown().optional(),
-    metadata: z.unknown().optional(),
-  })
   .strict();
 
 async function readStream(baseUrl: string, lastEventId = 0) {
