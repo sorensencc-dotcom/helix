@@ -324,9 +324,18 @@ export class WhichLlmArtifactTransport
     // 3. Verify local model installation
     const recommendedModel = artifact.data.recommendations.local_muscle_anchor;
     if (this.options.installedModelChecker) {
-      const isInstalled = await this.options.installedModelChecker(
-        recommendedModel,
-      );
+      let isInstalled = false;
+      try {
+        isInstalled = await this.options.installedModelChecker(
+          recommendedModel,
+        );
+      } catch {
+        return {
+          status: "failure",
+          code: "UNAVAILABLE",
+          message: `Unable to verify local installation for model '${recommendedModel}'.`,
+        };
+      }
       if (!isInstalled) {
         return {
           status: "failure",

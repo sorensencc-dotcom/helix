@@ -153,10 +153,30 @@ describe("WhichLlmArtifactTransport & Invariant Defense", () => {
     });
   });
 
+  it("returns UNAVAILABLE when installedModelChecker throws an unexpected error", async () => {
+    const path = validHashedArtifact({
+      evaluated_at: new Date().toISOString(),
+      recommendations: {
+        frontier_judgment_anchor: "claude-3-5-sonnet-20241022",
+        local_muscle_anchor: "llama3:8b-instruct-fp16",
+      },
+    });
+    const transport = new WhichLlmArtifactTransport(path, {
+      installedModelChecker: () => {
+        throw new Error("Ollama daemon socket connection failed");
+      },
+    });
+    const result = await transport.send({}, identity);
+    expect(result).toMatchObject({
+      status: "failure",
+      code: "UNAVAILABLE",
+    });
+  });
+
   describe("Mandatory Helix Invariant: No Automatic Resend / Explicit Selection", () => {
     it("enforces local failure -> UI displays choices -> 0 provider dispatches -> user selection -> explicit send -> exactly 1 dispatch", async () => {
       // 1. Setup mock provider backend tracking dispatches
-      const dispatchCounts = { local: 0, claude: 0, gemini: 0 };
+      const dispatchCounts = { local: 0, claude: 0, gemini: 0, gpt4o: 0 };
       const promptPayload = "User confidential instruction";
 
       const executePrompt = async (provider: "local" | "claude" | "gemini") => {
