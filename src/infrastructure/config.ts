@@ -22,7 +22,7 @@ const configSchema = z.object({
   sigilExecuteUrl: z.string().url().optional(),
   whichLlmUrl: z.string().url().optional(),
   whichLlmArtifactPath: z.string().min(1).optional(),
-  ollamaUrl: z.string().url().default("http://127.0.0.1:11434/api/chat"),
+  ollamaUrl: z.string().url().optional(),
   windowsBridgeUrl: z.string().url(),
   windowsBridgeCommand: z.string().min(1),
 });

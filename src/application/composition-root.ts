@@ -141,7 +141,10 @@ export function createSessionService(
       "gpt-4o",
     ]);
   const localResponse =
-    overrides.responses ?? new OllamaResponseAdapter(config.ollamaUrl);
+    overrides.responses ??
+    new OllamaResponseAdapter(
+      config.ollamaUrl ?? "http://127.0.0.1:11434/api/chat",
+    );
   const claudeResponse = new CliResponseAdapter(
     "claude",
     createCliResponseRunner(process.env.HELIX_CLAUDE_COMMAND ?? "claude.exe"),
