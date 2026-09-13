@@ -211,8 +211,8 @@ function canonicalJson(obj: unknown): string {
 const modelSelectionArtifact = z.object({
   evaluated_at: z.string().optional(),
   recommendations: z.object({
-    local_muscle_anchor: z.string().min(1),
-    frontier_judgment_anchor: z.string().optional(),
+    local_muscle_anchor: z.string().min(1).nullable(),
+    frontier_judgment_anchor: z.string().nullable().optional(),
     local_fit_reasoning: z.string().optional(),
   }),
   hardware_profile: z
@@ -286,7 +286,7 @@ export class WhichLlmArtifactTransport
         status: "failure",
         code: "MALFORMED_RESPONSE",
         message:
-          "WhichLLM artifact is missing recommendations.local_muscle_anchor.",
+          "WhichLLM artifact schema validation failed.",
       };
     }
 
@@ -321,8 +321,18 @@ export class WhichLlmArtifactTransport
       }
     }
 
-    // 3. Verify local model installation
+    // 3. Check if local muscle anchor is available / not suppressed
     const recommendedModel = artifact.data.recommendations.local_muscle_anchor;
+    if (!recommendedModel) {
+      return {
+        status: "failure",
+        code: "UNAVAILABLE",
+        message:
+          "WhichLLM artifact has no available local muscle anchor (suppressed or unavailable).",
+      };
+    }
+
+    // 4. Verify local model installation
     if (this.options.installedModelChecker) {
       let isInstalled = false;
       try {

@@ -66,6 +66,24 @@ describe("WhichLlmArtifactTransport & Invariant Defense", () => {
     });
   });
 
+  it("returns UNAVAILABLE when recommendations.local_muscle_anchor is null (suppressed for safety)", async () => {
+    const path = validHashedArtifact({
+      evaluated_at: new Date().toISOString(),
+      recommendations: {
+        frontier_judgment_anchor: "claude-3-5-sonnet-20241022",
+        local_muscle_anchor: null,
+        local_fit_reasoning: "Suppressed due to tool-safety failure.",
+      },
+    });
+    const transport = new WhichLlmArtifactTransport(path);
+    const result = await transport.send({}, identity);
+    expect(result).toMatchObject({
+      status: "failure",
+      code: "UNAVAILABLE",
+      message: "WhichLLM artifact has no available local muscle anchor (suppressed or unavailable).",
+    });
+  });
+
   it("returns MALFORMED_RESPONSE when the file is not valid JSON", async () => {
     const directory = mkdtempSync(join(tmpdir(), "helix-whichllm-"));
     const path = join(directory, "model_selection.json");
