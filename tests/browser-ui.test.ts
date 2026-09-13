@@ -50,6 +50,10 @@ describe("browser operator console boundary", () => {
     expect(html).toContain("response?.modelUsed");
     expect(html).toContain("metadata?.approvalState");
     expect(html).toContain("metadata?.receiptState");
+    expect(html).toContain("response?.responseDisclosure");
+    expect(html).toContain("response?.effectiveScope");
+    expect(html).toContain("response?.modelDecision");
+    expect(html).toContain("Response disclosure");
     expect(html).toContain("prefers-reduced-motion: reduce");
     expect(html).toContain("button:focus-visible");
   });
