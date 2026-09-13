@@ -8,6 +8,7 @@ import {
 import {
   UnavailableAdapterTransport,
   HttpAdapterTransport,
+  KbSyncContextCacheTransport,
 } from "../adapters/transport.js";
 import {
   IcfRetrievalAdapter,
@@ -114,7 +115,7 @@ export function createSessionService(
         config.icfResolveUrl,
         (value) => value as never,
       )
-    : new UnavailableAdapterTransport<Record<string, unknown>, unknown>("ICF");
+    : new KbSyncContextCacheTransport(config.kbSyncKnowledgeDbPath);
   const whichTransport = config.whichLlmUrl
     ? new HttpAdapterTransport<Record<string, unknown>, unknown>(
         config.whichLlmUrl,

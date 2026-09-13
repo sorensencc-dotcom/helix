@@ -13,6 +13,7 @@ const configSchema = z.object({
   version: z.string().min(1).default("0.1.0"),
   taskDatabasePath: z.string().min(1).default("helix.sqlite"),
   icfResolveUrl: z.string().url().optional(),
+  kbSyncKnowledgeDbPath: z.string().min(1).optional(),
   sigilExecuteUrl: z.string().url().optional(),
   whichLlmUrl: z.string().url().optional(),
   windowsBridgeUrl: z.string().url(),
@@ -37,6 +38,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): HelixConfig {
     windowsBridgeCommand: env.HELIX_WINDOWS_BRIDGE_COMMAND,
     ...(env.HELIX_ICF_RESOLVE_URL
       ? { icfResolveUrl: env.HELIX_ICF_RESOLVE_URL }
+      : {}),
+    ...(env.HELIX_KB_SYNC_DB_PATH
+      ? { kbSyncKnowledgeDbPath: env.HELIX_KB_SYNC_DB_PATH }
       : {}),
     ...(env.HELIX_SIGIL_EXECUTE_URL
       ? { sigilExecuteUrl: env.HELIX_SIGIL_EXECUTE_URL }
