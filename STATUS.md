@@ -167,7 +167,9 @@ Sub-project 1 of the local-authority build (see `docs/contracts/helix-phase-8-lo
 - Hardened prompt retention invariant: composer prompt text clears ONLY upon confirmed HTTP 201/202 task admission, retaining prompt content across network and model execution failures.
 - Defended zero-automated-cloud-failover invariant: local execution failure preserves prompt in UI without issuing background cloud dispatches; cloud execution requires explicit user dropdown selection and resubmit.
 - Gated all test fixture control routes (`/__fixture/*`) behind `fixtureMode` configuration and verified production daemon isolates and returns HTTP 404 for all fixture endpoints.
-- Added Playwright browser E2E test suite (`tests/e2e/model-selection.spec.ts`) validating 4 scenarios: UI dropdown rendering, prompt retention on failure, zero automated cloud dispatch, and explicit operator resubmit.
-- Full local gate passes: `npm run check` (29 test files, 150 Vitest unit/integration tests, Prettier, ESLint, docs audit) and `npm run test:e2e` (4/4 Playwright tests).
+- Added injectable `DaemonLogger` in `src/daemon/server.ts` filtering out expected simulated fixture failures while preserving unexpected runtime errors.
+- Added Playwright browser E2E test suite (`tests/e2e/model-selection.spec.ts`) validating 6 scenarios: UI dropdown rendering, prompt retention on failure, zero automated cloud dispatch, explicit operator resubmit via button click, explicit multi-provider routing and dispatch isolation (Gemini, Codex, Grok), and keyboard Enter-key resubmission with dispatch-counter invariant assertions.
+- Full local gate passes: `npm run check` (29 test files, 150 Vitest unit/integration tests, Prettier, ESLint, docs audit) and `npm run test:e2e` (6/6 Playwright tests).
+
 
 

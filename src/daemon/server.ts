@@ -192,6 +192,10 @@ export interface FixtureCounters {
   grok: number;
 }
 
+export interface DaemonLogger {
+  error(...args: unknown[]): void;
+}
+
 export function createDaemon(
   config: HelixConfig,
   options: {
@@ -201,11 +205,13 @@ export function createDaemon(
     fixtureMode?: boolean;
     fixtureFaults?: FixtureFaults;
     fixtureCounters?: FixtureCounters;
+    logger?: DaemonLogger;
   } = {},
 ) {
   if (!isLoopbackHost(config.host)) {
     throw new Error("CONFIG_UNSAFE_BIND");
   }
+  const logger: DaemonLogger = options.logger ?? console;
   const taskStore = options.taskStore ?? new MemoryTaskStore();
   const persistenceClass: SessionContext["persistenceClass"] =
     taskStore instanceof SqliteTaskStore ? "encrypted-sqlite" : "ram-only";
@@ -618,7 +624,15 @@ export function createDaemon(
               });
             sendJson(response, 202, result);
           } catch (error) {
-            console.error("Task execution failed:", error);
+            const isExpectedFixtureError =
+              fixtureMode &&
+              error instanceof Error &&
+              (error.message === "MODEL_EXECUTION_UNAVAILABLE" ||
+                error.message === "MODEL_OVERRIDE_DENIED" ||
+                error.message.startsWith("FIXTURE_"));
+            if (!isExpectedFixtureError) {
+              logger.error("Task execution failed:", error);
+            }
             const metadata: TaskMetadata = {
               taskId: id,
               sessionId,
