@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
@@ -192,24 +193,65 @@ export class KbSyncContextCacheTransport
 const DEFAULT_WHICHLLM_ARTIFACT_PATH =
   "C:\\dev\\trm\\_integration\\model_selection.json";
 
+function canonicalJson(obj: unknown): string {
+  if (obj === null || typeof obj !== "object") {
+    return JSON.stringify(obj);
+  }
+  if (Array.isArray(obj)) {
+    return `[${obj.map((item) => canonicalJson(item)).join(",")}]`;
+  }
+  const keys = Object.keys(obj as Record<string, unknown>).sort();
+  const pairs = keys.map(
+    (k) =>
+      `${JSON.stringify(k)}:${canonicalJson((obj as Record<string, unknown>)[k])}`,
+  );
+  return `{${pairs.join(",")}}`;
+}
+
 const modelSelectionArtifact = z.object({
+  evaluated_at: z.string().optional(),
   recommendations: z.object({
     local_muscle_anchor: z.string().min(1),
+    frontier_judgment_anchor: z.string().optional(),
+    local_fit_reasoning: z.string().optional(),
   }),
+  hardware_profile: z
+    .object({
+      gpu_count: z.number().optional(),
+      gpu_name: z.string().optional(),
+      vram_gb: z.number().optional(),
+      ram_gb: z.number().optional(),
+    })
+    .optional(),
+  ranked_candidates: z.array(z.record(z.unknown())).optional(),
+  lineage: z
+    .object({
+      contract_type: z.string().optional(),
+      schema_version: z.string().optional(),
+      provenance_flags: z.array(z.string()).optional(),
+    })
+    .optional(),
+  hash_chain_self: z.string().optional(),
 });
+
+export interface WhichLlmArtifactTransportOptions {
+  installedModelChecker?: (modelName: string) => Promise<boolean> | boolean;
+  maxAgeDays?: number;
+  verifyHash?: boolean;
+}
 
 /**
  * Reads WhichLLM's manually-run BFCL sweep output
- * (`_integration/model_selection.json`, written by
- * `scripts/whichllm-bfcl-evaluator.{mjs,py}`) directly. There is no HTTP
- * authority: the sweep is an operator-triggered script, and this transport
- * only ever consumes its latest artifact.
+ * (`_integration/model_selection.json`, written by TRM WhichLLM evaluator) directly.
+ * Verifies self-hash integrity, artifact freshness TTL, and local model installation
+ * before approving local execution.
  */
 export class WhichLlmArtifactTransport
   implements AdapterTransport<Record<string, unknown>, unknown>
 {
   public constructor(
     private readonly artifactPath: string = DEFAULT_WHICHLLM_ARTIFACT_PATH,
+    private readonly options: WhichLlmArtifactTransportOptions = {},
   ) {}
 
   public async send(
@@ -248,11 +290,57 @@ export class WhichLlmArtifactTransport
       };
     }
 
+    // 1. Verify self-integrity hash if present and hash verification enabled
+    if (this.options.verifyHash !== false && artifact.data.hash_chain_self) {
+      const { hash_chain_self: expectedHash, ...rest } = parsed as Record<
+        string,
+        unknown
+      >;
+      const computedHash = createHash("sha256")
+        .update(canonicalJson(rest))
+        .digest("hex");
+      if (computedHash !== expectedHash) {
+        return {
+          status: "failure",
+          code: "MALFORMED_RESPONSE",
+          message: "WhichLLM artifact self-integrity hash mismatch.",
+        };
+      }
+    }
+
+    // 2. Verify artifact freshness / TTL
+    if (artifact.data.evaluated_at) {
+      const evaluatedDate = new Date(artifact.data.evaluated_at).getTime();
+      const maxAgeMs = (this.options.maxAgeDays ?? 30) * 24 * 60 * 60 * 1000;
+      if (Number.isFinite(evaluatedDate) && Date.now() - evaluatedDate > maxAgeMs) {
+        return {
+          status: "failure",
+          code: "UNAVAILABLE",
+          message: `WhichLLM artifact is stale (evaluated at ${artifact.data.evaluated_at} exceeds ${this.options.maxAgeDays ?? 30}-day TTL).`,
+        };
+      }
+    }
+
+    // 3. Verify local model installation
+    const recommendedModel = artifact.data.recommendations.local_muscle_anchor;
+    if (this.options.installedModelChecker) {
+      const isInstalled = await this.options.installedModelChecker(
+        recommendedModel,
+      );
+      if (!isInstalled) {
+        return {
+          status: "failure",
+          code: "UNAVAILABLE",
+          message: `Recommended local model '${recommendedModel}' is not installed locally in Ollama.`,
+        };
+      }
+    }
+
     return {
       contract: "helix-adapter.v1",
       status: "success",
       provider: "local",
-      model: artifact.data.recommendations.local_muscle_anchor,
+      model: recommendedModel,
       cloudEnabled: false,
     };
   }
