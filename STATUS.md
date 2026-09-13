@@ -43,6 +43,10 @@ Obtain concrete ICF, WhichLLM, and Sigil owner protocols before implementing liv
 - Confirm concrete ICF, WhichLLM, and Sigil adapter protocols before integration work.
 - Supply MSIX signing identity and release channel before packaging work.
 
+## Approval scope (2026-09-12)
+
+Operator approved `docs/contracts/helix-phase-8-unified-authority-contract-request.md` (commit `3822a6d`) as the official request document to the four owners (Windows HTTP Auth, ICF, Sigil, WhichLLM). This approval covers only: the request document is accepted, existing local implementation fixtures continue as candidates, and owner handoff can proceed. It does not cover: inventing missing mappings, treating existing candidate schemas as authoritative, enabling live adapters, or clearing production release gates. Each owner's protocol (endpoints, schemas, identity rules, receipts, failure behavior, fixtures) still requires separate approval before any of that work proceeds.
+
 ## Audits (2026-09-11)
 
 - Doc link audit: all `.md` cross-references in `README.md` and `docs/` resolve. Found and fixed two real defects from the authority-lock commit: a literal `` `r`n `` escape sequence leaked into `docs/contracts/README.md` (merged two list items onto one line), and a stale filename in `README.md` pointing at a non-dated `helix-phase-8-implementation-plan.md` instead of the actual `2026-09-10-helix-phase-8-implementation-plan.md`.
