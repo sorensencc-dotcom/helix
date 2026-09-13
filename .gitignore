@@ -5,6 +5,7 @@ dist/
 # .NET build output for the native windows-bridge project
 native/windows-bridge/bin/
 native/windows-bridge/obj/
+native/windows-bridge/publish/
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 graft/
@@ -12,3 +13,12 @@ graft/
 # Playwright test execution artifacts
 test-results/
 playwright-report/
+
+# Runtime databases and logs
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+helix-audit.jsonl
+.kb_cache/
+.serena/
+ijfw/

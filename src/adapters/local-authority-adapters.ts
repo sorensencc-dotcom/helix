@@ -186,7 +186,8 @@ export interface OllamaFetch {
 
 export class OllamaResponseAdapter {
   public constructor(
-    private readonly endpoint = "http://127.0.0.1:11434/api/chat",
+    private readonly endpoint = process.env.HELIX_OLLAMA_URL ??
+      "http://127.0.0.1:11434/api/chat",
     private readonly fetcher: OllamaFetch = (input, init) => fetch(input, init),
   ) {}
 
@@ -262,8 +263,9 @@ export function createCliResponseRunner(
     new Promise((resolve, reject) => {
       const child = spawn(command, args, {
         windowsHide: true,
-        stdio: ["ignore", "pipe", "pipe"],
+        stdio: ["pipe", "pipe", "pipe"],
       });
+      child.stdin.end();
       let stdout = "";
       let stderr = "";
       const timer = setTimeout(() => {
@@ -284,7 +286,22 @@ export function createCliResponseRunner(
         clearTimeout(timer);
         if (code !== 0) return reject(new Error("MODEL_EXECUTION_UNAVAILABLE"));
         try {
-          const parsed: unknown = JSON.parse(stdout);
+          const lines = stdout.trim().split(/\r?\n/);
+          let parsed: unknown;
+          for (let i = lines.length - 1; i >= 0; i--) {
+            const line = lines[i]?.trim();
+            if (line && (line.startsWith("{") || line.startsWith("["))) {
+              try {
+                parsed = JSON.parse(line);
+                break;
+              } catch {
+                // Try whole or next
+              }
+            }
+          }
+          if (!parsed && stdout.trim()) {
+            parsed = JSON.parse(stdout.trim());
+          }
           if (
             !parsed ||
             typeof parsed !== "object" ||
@@ -311,13 +328,19 @@ export class CliResponseAdapter {
       request: request.payload,
       context: request.retrieval.contextPacket,
     });
+    const model =
+      this.provider === "claude" &&
+      (request.modelDecision.selectedModel === "claude-3-5-sonnet-20241022" ||
+        request.modelDecision.selectedModel === "claude")
+        ? "sonnet"
+        : request.modelDecision.selectedModel;
     const args =
       this.provider === "claude"
         ? [
             "-p",
             prompt,
             "--model",
-            request.modelDecision.selectedModel,
+            model,
             "--output-format",
             "json",
             "--no-session-persistence",
@@ -330,7 +353,7 @@ export class CliResponseAdapter {
             "--sandbox",
             "read-only",
             "--model",
-            request.modelDecision.selectedModel,
+            model,
             prompt,
           ];
     const answer = await this.runner(args);

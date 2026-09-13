@@ -1,0 +1,47 @@
+services:
+  helix:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: helix-daemon
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8877:8877"
+    environment:
+      - NODE_ENV=production
+      - HELIX_CONTAINER_MODE=true
+      - HELIX_HOST=0.0.0.0
+      - HELIX_PORT=8877
+      - HELIX_TASK_DATABASE_PATH=/data/helix.sqlite
+      - HELIX_WINDOWS_BRIDGE_URL=http://127.0.0.1:8878
+      - HELIX_WINDOWS_BRIDGE_COMMAND=node scripts/container-bridge.mjs 8878
+      - HELIX_ICF_RESOLVE_URL=http://authority-stub:4180/icf/resolve
+      - HELIX_WHICHLLM_URL=http://authority-stub:4180/whichllm/route
+      - HELIX_SIGIL_EXECUTE_URL=http://authority-stub:4180/sigil/execute
+      - HELIX_OLLAMA_URL=http://host.docker.internal:11434/api/chat
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - helix_data:/data
+    networks:
+      - helix-net
+    depends_on:
+      - authority-stub
+
+  authority-stub:
+    build:
+      context: ./dev/authority-stub
+      dockerfile: Dockerfile
+    container_name: helix-authority-stub
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4180:4180"
+    networks:
+      - helix-net
+
+volumes:
+  helix_data:
+
+networks:
+  helix-net:
+    driver: bridge

@@ -51,6 +51,22 @@ export class CurlNegotiateFetch {
     url: string,
     init?: RequestInitLike,
   ): Promise<ResponseLike> {
+    if (process.env.HELIX_CONTAINER_MODE) {
+      const fetchInit: RequestInit = {
+        method: init?.method ?? "GET",
+      };
+      if (init?.body !== undefined) {
+        fetchInit.headers = { "Content-Type": "application/json" };
+        fetchInit.body = JSON.stringify(init.body);
+      }
+      const res = await fetch(url, fetchInit);
+      return {
+        ok: res.ok,
+        async json() {
+          return res.json();
+        },
+      };
+    }
     if (process.platform !== "win32") throw new Error("WINDOWS_ONLY");
     const directory = await mkdtemp(join(tmpdir(), "helix-negotiate-"));
     const cookieJar = join(directory, "cookies.txt");

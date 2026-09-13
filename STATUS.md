@@ -169,7 +169,17 @@ Sub-project 1 of the local-authority build (see `docs/contracts/helix-phase-8-lo
 - Gated all test fixture control routes (`/__fixture/*`) behind `fixtureMode` configuration and verified production daemon isolates and returns HTTP 404 for all fixture endpoints.
 - Added injectable `DaemonLogger` in `src/daemon/server.ts` filtering out expected simulated fixture failures while preserving unexpected runtime errors.
 - Added Playwright browser E2E test suite (`tests/e2e/model-selection.spec.ts`) validating 6 scenarios: UI dropdown rendering, prompt retention on failure, zero automated cloud dispatch, explicit operator resubmit via button click, explicit multi-provider routing and dispatch isolation (Gemini, Codex, Grok), and keyboard Enter-key resubmission with dispatch-counter invariant assertions.
-- Full local gate passes: `npm run check` (29 test files, 150 Vitest unit/integration tests, Prettier, ESLint, docs audit) and `npm run test:e2e` (6/6 Playwright tests).
+## Continuous Docker deployment (2026-09-13)
+
+- Implemented standalone container execution stack (`Dockerfile`, `docker-compose.yml`) running continuously with `restart: unless-stopped`.
+- Published GUI and HTTP API to host port `8877` (`http://127.0.0.1:8877/`), leaving port `8787` isolated for existing Headroom container.
+- Added container-native bridge script (`scripts/container-bridge.mjs`) implementing `helix.windows-principal.v1` and `helix.dpapi-crypto.v1` encryption over loopback in container runtime.
+- Added container-aware fetch and 0.0.0.0 bind host handling in `src/platform/windows-integrations.ts` and `src/infrastructure/config.ts` when `HELIX_CONTAINER_MODE` is enabled.
+- Hardened static web asset handler in `src/daemon/server.ts` to support both `GET` and `HEAD` HTTP methods.
+- Mounted named volume `helix_data:/data` to persist encrypted SQLite sessions and tasks across container rebuilds and host restarts.
+- Unified with `authority-stub` service in `docker-compose.yml` with host-gateway resolution (`host.docker.internal`).
+- Full local test suite passes: `npm run check` (29 test files, 152 tests, build, lint, formatting, and docs audit).
+
 
 
 

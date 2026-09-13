@@ -102,7 +102,8 @@ function serveWebAsset(
   request: IncomingMessage,
   response: ServerResponse,
 ): boolean {
-  if (request.method !== "GET" || !request.url) return false;
+  if ((request.method !== "GET" && request.method !== "HEAD") || !request.url)
+    return false;
   const pathname = new URL(request.url, "http://localhost").pathname;
   const relativePath = pathname === "/" ? "index.html" : pathname.slice(1);
   if (!relativePath || relativePath.startsWith("v1/")) return false;
@@ -116,7 +117,11 @@ function serveWebAsset(
       ...securityHeaders,
       "content-type": contentTypes[extension] ?? "application/octet-stream",
     });
-    response.end(body);
+    if (request.method === "HEAD") {
+      response.end();
+    } else {
+      response.end(body);
+    }
     return true;
   } catch {
     return false;
