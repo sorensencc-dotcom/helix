@@ -156,10 +156,12 @@
         const input = $('prompt');
         const text = input.value.trim();
         if (!text) return;
-        const modelChoice = $('model-select')?.value;
-        const model = modelChoice && modelChoice !== 'automatic' ? modelChoice : undefined;
+          const modelChoice = $('model-select')?.value;
+          const model = modelChoice && modelChoice !== 'automatic' ? modelChoice : undefined;
         try {
           const sessionId = await ensureSession();
+          addMessage(text, true);
+          $('notice').textContent = 'Request sent; waiting for the selected model…';
           const task = await json('/v1/tasks', {
             method: 'POST',
             headers: { 'content-type': 'application/json', 'idempotency-key': `ui-${Date.now()}` },
@@ -167,7 +169,6 @@
           }, validateTask);
           input.value = '';
           $('notice').textContent = '';
-          addMessage(text, true);
           state.taskRecords.set(task.id, task);
           applyTask(state.taskRecords.get(task.id));
         } catch (error) {
