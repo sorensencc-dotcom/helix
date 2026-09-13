@@ -71,7 +71,18 @@
         <div class="notice" role="status" aria-live="polite">LOCAL FIXTURE MODE · No live authority or production control is available.</div>
         <section class="thread" id="thread" aria-live="polite"><div class="empty" id="empty">Ask Helix about your governed context.<br /><small>Governed retrieval fails closed while ICF is unavailable.</small></div></section>
         <form class="composer-wrap" id="ask-form">
-          <div class="scope"><span>Scope</span><span class="tag">Automatic</span><span class="tag">Read-only</span><button class="secondary" type="button" id="scope">View scope</button></div>
+          <div class="scope">
+            <span>Scope</span><span class="tag">Automatic</span><span class="tag">Read-only</span>
+            <label for="model-select" class="section-label" style="margin:0 0 0 8px;display:inline-block;">Model</label>
+            <select id="model-select" class="secondary" aria-label="Select model" style="padding:4px 8px;font-size:0.68rem;background:var(--helix-card);color:var(--helix-text);">
+              <option value="automatic" selected>WhichLLM · Automatic (Local Muscle)</option>
+              <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+              <option value="gemini-2.0-flash">Antigravity (Gemini 2.0 Flash)</option>
+              <option value="gpt-4o">Codex (GPT-4o)</option>
+              <option value="grok-2">Grok-2</option>
+            </select>
+            <button class="secondary" type="button" id="scope">View scope</button>
+          </div>
           <div class="composer-row"><input class="composer" id="prompt" autocomplete="off" placeholder="Ask Helix…" aria-label="Ask Helix" required /><button class="primary" type="submit">Send →</button></div>
           <div class="disclosure" id="notice">ICF lineage and source disclosure will appear with each governed response.</div>
         </form>
@@ -140,7 +151,29 @@
       async function checkDaemon() { try { const result = await json('/v1/status', undefined, validateStatus); setState(`Daemon · ${result.status}`, true); renderReadiness(result.readiness); await loadSessions(); } catch { setState('Daemon unavailable'); } }
       $('search').addEventListener('input', renderSessions);
       $('menu-toggle').addEventListener('click', () => { const open = $('sidebar').classList.toggle('open'); $('menu-toggle').setAttribute('aria-expanded', String(open)); });
-      $('ask-form').addEventListener('submit', async (event) => { event.preventDefault(); const input = $('prompt'); const text = input.value.trim(); if (!text) return; input.value = ''; try { const sessionId = await ensureSession(); addMessage(text, true); const task = await json('/v1/tasks', { method: 'POST', headers: { 'content-type': 'application/json', 'idempotency-key': `ui-${Date.now()}` }, body: JSON.stringify({ sessionId, instruction: text }) }, validateTask); state.taskRecords.set(task.id, task); applyTask(state.taskRecords.get(task.id)); } catch (error) { addMessage(`Request unavailable: ${error.message}`, false, 'No governed response was produced. Check daemon and ICF status before retrying.'); } });
+      $('ask-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const input = $('prompt');
+        const text = input.value.trim();
+        if (!text) return;
+        const modelChoice = $('model-select')?.value;
+        const model = modelChoice && modelChoice !== 'automatic' ? modelChoice : undefined;
+        try {
+          const sessionId = await ensureSession();
+          const task = await json('/v1/tasks', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'idempotency-key': `ui-${Date.now()}` },
+            body: JSON.stringify({ sessionId, instruction: text, ...(model ? { model } : {}) })
+          }, validateTask);
+          input.value = '';
+          addMessage(text, true);
+          state.taskRecords.set(task.id, task);
+          applyTask(state.taskRecords.get(task.id));
+        } catch (error) {
+          addMessage(`Request unavailable: ${error.message}`, false, 'No governed response was produced. Check daemon and ICF status before retrying.');
+          $('notice').textContent = `Request failed (${error.message}); prompt retained for resubmission.`;
+        }
+      });
       $('new-session').addEventListener('click', async () => { try { const result = await json('/v1/sessions', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }, validateSession); state.sessionId = result.sessionId; state.tasks.clear(); state.historyRequest += 1; await loadSessions(); clearThread('New local session.', 'Governed content remains session-scoped until explicitly exported.'); } catch (error) { $('notice').textContent = `Session unavailable: ${error.message}`; } });
       $('scope').addEventListener('click', () => { $('notice').textContent = 'Scope is fixed to Automatic / Read-only in local fixture mode; no scope-edit route is available.'; });
       void checkDaemon(); void connectEvents();

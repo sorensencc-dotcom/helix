@@ -5,7 +5,7 @@ import {
 } from "node:http";
 import { createHash, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isLoopbackHost, type HelixConfig } from "../infrastructure/config.js";
 import {
@@ -107,7 +107,7 @@ function serveWebAsset(
   const relativePath = pathname === "/" ? "index.html" : pathname.slice(1);
   if (!relativePath || relativePath.startsWith("v1/")) return false;
   const filePath = resolve(webRoot, relativePath);
-  if (filePath !== webRoot && !filePath.startsWith(`${webRoot}\\`))
+  if (filePath !== webRoot && !filePath.startsWith(`${webRoot}${sep}`))
     return false;
   try {
     const body = readFileSync(filePath);
@@ -125,20 +125,37 @@ function serveWebAsset(
 
 async function readJson(
   request: IncomingMessage,
+  timeoutMs = 30_000,
 ): Promise<Record<string, unknown> | undefined> {
   const chunks: Buffer[] = [];
   let size = 0;
-  for await (const chunk of request) {
-    size += Buffer.byteLength(chunk);
-    if (size > maxBodyBytes) throw new Error("REQUEST_TOO_LARGE");
-    chunks.push(Buffer.from(chunk));
+
+  const readPromise = (async () => {
+    for await (const chunk of request) {
+      size += Buffer.byteLength(chunk);
+      if (size > maxBodyBytes) throw new Error("REQUEST_TOO_LARGE");
+      chunks.push(Buffer.from(chunk));
+    }
+    if (size === 0) return undefined;
+    const value: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error("INVALID_JSON_OBJECT");
+    }
+    return value as Record<string, unknown>;
+  })();
+
+  if (timeoutMs <= 0) return readPromise;
+
+  let timer: NodeJS.Timeout | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("REQUEST_TIMEOUT")), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([readPromise, timeoutPromise]);
+  } finally {
+    if (timer) clearTimeout(timer);
   }
-  if (size === 0) return undefined;
-  const value: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("INVALID_JSON_OBJECT");
-  }
-  return value as Record<string, unknown>;
 }
 
 function sendJson(
@@ -162,12 +179,28 @@ function idempotencyFingerprint(
     .digest("hex");
 }
 
+export interface FixtureFaults {
+  failSession?: boolean;
+  failLocal?: boolean;
+}
+
+export interface FixtureCounters {
+  local: number;
+  claude: number;
+  antigravity: number;
+  codex: number;
+  grok: number;
+}
+
 export function createDaemon(
   config: HelixConfig,
   options: {
     taskStore?: TaskStore;
     sessionService?: ComposedSessionService;
     resolvePrincipal?: WindowsPrincipalResolver;
+    fixtureMode?: boolean;
+    fixtureFaults?: FixtureFaults;
+    fixtureCounters?: FixtureCounters;
   } = {},
 ) {
   if (!isLoopbackHost(config.host)) {
@@ -176,16 +209,86 @@ export function createDaemon(
   const taskStore = options.taskStore ?? new MemoryTaskStore();
   const persistenceClass: SessionContext["persistenceClass"] =
     taskStore instanceof SqliteTaskStore ? "encrypted-sqlite" : "ram-only";
-  const idempotency = new Map<string, { fingerprint: string; body: unknown }>();
+  const idempotencyTtlMs = 3_600_000;
+  const idempotencyMaxSize = 10_000;
+  const idempotency = new Map<
+    string,
+    { fingerprint: string; body: unknown; timestamp: number }
+  >();
+  const pruneIdempotency = () => {
+    const now = Date.now();
+    for (const [key, entry] of idempotency.entries()) {
+      if (now - entry.timestamp > idempotencyTtlMs) {
+        idempotency.delete(key);
+      }
+    }
+    if (idempotency.size > idempotencyMaxSize) {
+      const keysToDelete = Array.from(idempotency.keys()).slice(
+        0,
+        idempotency.size - idempotencyMaxSize,
+      );
+      for (const k of keysToDelete) {
+        idempotency.delete(k);
+      }
+    }
+  };
   const stream = createSseBuffer();
   stream.publish("metadata", { version: config.version });
   stream.publish("done", { status: "COMPLETED" });
   const publishTask = (task: StoredTask | Task) =>
     stream.publish("metadata", { task });
+
+  const fixtureMode = Boolean(
+    options.fixtureMode || process.env.HELIX_FIXTURE_MODE === "1",
+  );
+  const fixtureFaults: FixtureFaults = options.fixtureFaults ?? {};
+  const fixtureCounters: FixtureCounters = options.fixtureCounters ?? {
+    local: 0,
+    claude: 0,
+    antigravity: 0,
+    codex: 0,
+    grok: 0,
+  };
+
   return createServer((request: IncomingMessage, response: ServerResponse) => {
     for (const [name, value] of Object.entries(securityHeaders))
       response.setHeader(name, value);
     if (serveWebAsset(request, response)) return;
+
+    if (fixtureMode) {
+      if (request.method === "GET" && request.url === "/__fixture/counters") {
+        sendJson(response, 200, { dispatches: fixtureCounters });
+        return;
+      }
+      if (request.method === "POST" && request.url === "/__fixture/faults") {
+        void (async () => {
+          try {
+            const body = (await readJson(request)) ?? {};
+            Object.assign(fixtureFaults, body);
+            sendJson(response, 200, { ok: true, faults: fixtureFaults });
+          } catch {
+            sendJson(response, 400, {
+              code: "INVALID_JSON_OBJECT",
+              retryable: false,
+            });
+          }
+        })();
+        return;
+      }
+      if (request.method === "POST" && request.url === "/__fixture/reset") {
+        Object.keys(fixtureFaults).forEach(
+          (k) => delete (fixtureFaults as Record<string, unknown>)[k],
+        );
+        fixtureCounters.local = 0;
+        fixtureCounters.claude = 0;
+        fixtureCounters.antigravity = 0;
+        fixtureCounters.codex = 0;
+        fixtureCounters.grok = 0;
+        sendJson(response, 200, { ok: true });
+        return;
+      }
+    }
+
     if (request.method === "GET" && request.url === "/health") {
       sendJson(response, 200, healthResponse(config.version));
       return;
@@ -241,6 +344,13 @@ export function createDaemon(
       let sessionId = "";
       try {
         sessionId = decodeURIComponent(sessionTasks[1] ?? "");
+        if (
+          !sessionId ||
+          sessionId.length > maxSessionIdLength ||
+          !/^[A-Za-z0-9._:-]+$/.test(sessionId)
+        ) {
+          throw new Error("INVALID_SESSION_ID");
+        }
       } catch {
         sendJson(response, 400, {
           code: "INVALID_SESSION_ID",
@@ -248,7 +358,7 @@ export function createDaemon(
         });
         return;
       }
-      if (!sessionId || !taskStore.hasSession(sessionId)) {
+      if (!taskStore.hasSession(sessionId)) {
         sendJson(response, 404, {
           code: "SESSION_NOT_FOUND",
           retryable: false,
@@ -312,19 +422,32 @@ export function createDaemon(
           request.url,
           body,
         );
+        pruneIdempotency();
         if (typeof key === "string" && idempotency.has(key)) {
           const entry = idempotency.get(key);
-          if (entry?.fingerprint !== fingerprint) {
-            sendJson(response, 409, {
-              code: "IDEMPOTENCY_CONFLICT",
+          if (entry) {
+            if (Date.now() - entry.timestamp > idempotencyTtlMs) {
+              idempotency.delete(key);
+            } else if (entry.fingerprint !== fingerprint) {
+              sendJson(response, 409, {
+                code: "IDEMPOTENCY_CONFLICT",
+                retryable: false,
+              });
+              return;
+            } else {
+              sendJson(response, 200, entry.body);
+              return;
+            }
+          }
+        }
+        if (request.method === "POST" && request.url === "/v1/sessions") {
+          if (fixtureFaults.failSession) {
+            sendJson(response, 503, {
+              code: "SESSION_SERVICE_UNAVAILABLE",
               retryable: false,
             });
             return;
           }
-          sendJson(response, 200, entry.body);
-          return;
-        }
-        if (request.method === "POST" && request.url === "/v1/sessions") {
           if (
             body?.sessionId !== undefined &&
             (typeof body.sessionId !== "string" ||
@@ -351,7 +474,11 @@ export function createDaemon(
           }
           const result = { sessionId: id, status: "READY" };
           if (typeof key === "string")
-            idempotency.set(key, { fingerprint, body: result });
+            idempotency.set(key, {
+              fingerprint,
+              body: result,
+              timestamp: Date.now(),
+            });
           sendJson(response, 201, result);
           return;
         }
@@ -378,7 +505,24 @@ export function createDaemon(
             });
             return;
           }
-          const id = `task_${taskStore.listTasks().length + 1}`;
+          if (
+            body.model !== undefined &&
+            (typeof body.model !== "string" || body.model.length > 256)
+          ) {
+            sendJson(response, 400, {
+              code: "INVALID_TASK_INPUT",
+              retryable: false,
+            });
+            return;
+          }
+          const requestedModel =
+            typeof body.model === "string" &&
+            body.model.trim().length > 0 &&
+            body.model !== "automatic"
+              ? body.model.trim()
+              : undefined;
+
+          const id = `task_${randomUUID()}`;
           if (!options.sessionService) {
             const result: Task = {
               id,
@@ -389,7 +533,11 @@ export function createDaemon(
             taskStore.saveTask(result);
             publishTask(result);
             if (typeof key === "string")
-              idempotency.set(key, { fingerprint, body: result });
+              idempotency.set(key, {
+                fingerprint,
+                body: result,
+                timestamp: Date.now(),
+              });
             sendJson(response, 202, result);
             return;
           }
@@ -431,6 +579,7 @@ export function createDaemon(
             operator,
             sessionId,
             payload: { instruction: body.instruction },
+            requestedModel,
             scope: "ordinary",
             timestamp: new Date().toISOString(),
           };
@@ -462,9 +611,14 @@ export function createDaemon(
             taskStore.saveTask(result);
             publishTask(result);
             if (typeof key === "string")
-              idempotency.set(key, { fingerprint, body: result });
+              idempotency.set(key, {
+                fingerprint,
+                body: result,
+                timestamp: Date.now(),
+              });
             sendJson(response, 202, result);
-          } catch {
+          } catch (error) {
+            console.error("Task execution failed:", error);
             const metadata: TaskMetadata = {
               taskId: id,
               sessionId,
@@ -492,8 +646,24 @@ export function createDaemon(
           request.method === "DELETE" &&
           request.url?.match(/^\/v1\/sessions\/([^/]+)$/);
         if (closeSession) {
-          const sessionId = closeSession[1];
-          if (!sessionId || !taskStore.hasSession(sessionId)) {
+          let sessionId = "";
+          try {
+            sessionId = decodeURIComponent(closeSession[1] ?? "");
+            if (
+              !sessionId ||
+              sessionId.length > maxSessionIdLength ||
+              !/^[A-Za-z0-9._:-]+$/.test(sessionId)
+            ) {
+              throw new Error("INVALID_SESSION_ID");
+            }
+          } catch {
+            sendJson(response, 400, {
+              code: "INVALID_SESSION_ID",
+              retryable: false,
+            });
+            return;
+          }
+          if (!taskStore.hasSession(sessionId)) {
             sendJson(response, 404, {
               code: "SESSION_NOT_FOUND",
               retryable: false,
@@ -520,8 +690,24 @@ export function createDaemon(
           request.method === "GET" &&
           request.url?.match(/^\/v1\/tasks\/([^/]+)$/);
         if (taskLookup) {
-          const taskId = taskLookup[1];
-          const task = taskId ? taskStore.getTask(taskId) : undefined;
+          let taskId = "";
+          try {
+            taskId = decodeURIComponent(taskLookup[1] ?? "");
+            if (
+              !taskId ||
+              taskId.length > 128 ||
+              !/^[A-Za-z0-9._:-]+$/.test(taskId)
+            ) {
+              throw new Error("INVALID_TASK_ID");
+            }
+          } catch {
+            sendJson(response, 400, {
+              code: "INVALID_TASK_ID",
+              retryable: false,
+            });
+            return;
+          }
+          const task = taskStore.getTask(taskId);
           if (!task) {
             sendJson(response, 404, {
               code: "TASK_NOT_FOUND",
@@ -536,8 +722,17 @@ export function createDaemon(
           request.method === "POST" &&
           request.url?.match(/^\/v1\/tasks\/([^/]+)\/cancel$/);
         if (cancel) {
-          const taskId = cancel[1];
-          if (!taskId) {
+          let taskId = "";
+          try {
+            taskId = decodeURIComponent(cancel[1] ?? "");
+            if (
+              !taskId ||
+              taskId.length > 128 ||
+              !/^[A-Za-z0-9._:-]+$/.test(taskId)
+            ) {
+              throw new Error("INVALID_TASK_ID");
+            }
+          } catch {
             sendJson(response, 400, {
               code: "INVALID_TASK_ID",
               retryable: false,
@@ -570,19 +765,20 @@ export function createDaemon(
           retryable: false,
         });
       } catch (error) {
-        sendJson(
-          response,
-          error instanceof Error && error.message === "REQUEST_TOO_LARGE"
-            ? 413
-            : 400,
-          {
-            code:
-              error instanceof Error && error.message === "REQUEST_TOO_LARGE"
-                ? "REQUEST_TOO_LARGE"
-                : "INVALID_JSON",
-            retryable: false,
-          },
-        );
+        const isTooLarge =
+          error instanceof Error && error.message === "REQUEST_TOO_LARGE";
+        const isTimeout =
+          error instanceof Error && error.message === "REQUEST_TIMEOUT";
+        const status = isTooLarge ? 413 : isTimeout ? 408 : 400;
+        const code = isTooLarge
+          ? "REQUEST_TOO_LARGE"
+          : isTimeout
+            ? "REQUEST_TIMEOUT"
+            : "INVALID_JSON";
+        sendJson(response, status, {
+          code,
+          retryable: isTimeout,
+        });
       }
     })();
     return;

@@ -324,4 +324,95 @@ describe("daemon routes", () => {
     expect(new TextDecoder().decode(second.value)).toContain('"id":"task_');
     await reader!.cancel();
   });
+
+  it("strictly isolates and returns 404 for all /__fixture/* endpoints in production composition", async () => {
+    const getCounters = await fetch(`${url}/__fixture/counters`);
+    expect(getCounters.status).toBe(404);
+    expect(await getCounters.json()).toEqual({
+      code: "NOT_FOUND",
+      message: "Route not found",
+      retryable: false,
+    });
+
+    const postFaults = await fetch(`${url}/__fixture/faults`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ failLocalDispatch: true }),
+    });
+    expect(postFaults.status).toBe(404);
+    expect(await postFaults.json()).toEqual({
+      code: "NOT_FOUND",
+      message: "Route not found",
+      retryable: false,
+    });
+
+    const postReset = await fetch(`${url}/__fixture/reset`, {
+      method: "POST",
+    });
+    expect(postReset.status).toBe(404);
+    expect(await postReset.json()).toEqual({
+      code: "NOT_FOUND",
+      message: "Route not found",
+      retryable: false,
+    });
+  });
+
+  it("generates unique atomic task IDs under concurrent task submissions", async () => {
+    await fetch(`${url}/v1/sessions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sessionId: "concurrent_session" }),
+    });
+
+    const tasks = await Promise.all(
+      Array.from({ length: 10 }, (_, i) =>
+        fetch(`${url}/v1/tasks`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            sessionId: "concurrent_session",
+            instruction: `task ${i}`,
+          }),
+        }).then((res) => res.json() as Promise<{ id: string }>),
+      ),
+    );
+
+    const ids = tasks.map((t) => t.id);
+    const uniqueIds = new Set(ids);
+    expect(uniqueIds.size).toBe(10);
+    ids.forEach((id) => expect(id).toMatch(/^task_[0-9a-f-]{36}$/));
+  });
+
+  it("rejects path traversal attempts on static asset requests", async () => {
+    const res1 = await fetch(`${url}/..%2fpackage.json`);
+    expect(res1.status).toBe(404);
+
+    const res2 = await fetch(`${url}/sub/../../package.json`);
+    expect(res2.status).toBe(404);
+  });
+
+  it("validates URL decoded parameters across session and task routes", async () => {
+    const badSessionTasks = await fetch(
+      `${url}/v1/sessions/bad%20session%20id!/tasks`,
+    );
+    expect(badSessionTasks.status).toBe(400);
+    expect(await badSessionTasks.json()).toMatchObject({
+      code: "INVALID_SESSION_ID",
+    });
+
+    const badTaskLookup = await fetch(`${url}/v1/tasks/bad%20task%20id!`);
+    expect(badTaskLookup.status).toBe(400);
+    expect(await badTaskLookup.json()).toMatchObject({
+      code: "INVALID_TASK_ID",
+    });
+
+    const badTaskCancel = await fetch(
+      `${url}/v1/tasks/bad%20task%20id!/cancel`,
+      { method: "POST" },
+    );
+    expect(badTaskCancel.status).toBe(400);
+    expect(await badTaskCancel.json()).toMatchObject({
+      code: "INVALID_TASK_ID",
+    });
+  });
 });

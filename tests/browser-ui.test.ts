@@ -70,4 +70,19 @@ describe("browser operator console boundary", () => {
     );
     expect(html).toContain("response metadata is disclosed below.");
   });
+
+  it("exposes accessible model selection dropdown and fail-safe prompt retention", async () => {
+    const html = await readFile(
+      new URL("../web/index.html", import.meta.url),
+      "utf8",
+    );
+    expect(html).toContain('id="model-select"');
+    expect(html).toContain('aria-label="Select model"');
+    expect(html).toContain('value="automatic"');
+    expect(html).toContain('value="claude-3-5-sonnet-20241022"');
+    expect(html).toContain('value="gemini-2.0-flash"');
+    expect(html).toContain('value="gpt-4o"');
+    expect(html).toContain('value="grok-2"');
+    expect(html).toContain("prompt retained for resubmission");
+  });
 });

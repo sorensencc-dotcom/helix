@@ -80,7 +80,8 @@ describe("WhichLlmArtifactTransport & Invariant Defense", () => {
     expect(result).toMatchObject({
       status: "failure",
       code: "UNAVAILABLE",
-      message: "WhichLLM artifact has no available local muscle anchor (suppressed or unavailable).",
+      message:
+        "WhichLLM artifact has no available local muscle anchor (suppressed or unavailable).",
     });
   });
 
@@ -103,7 +104,8 @@ describe("WhichLlmArtifactTransport & Invariant Defense", () => {
         frontier_judgment_anchor: "claude-3-5-sonnet-20241022",
         local_muscle_anchor: "llama3:8b-instruct-fp16",
       },
-      hash_chain_self: "0000000000000000000000000000000000000000000000000000000000000000",
+      hash_chain_self:
+        "0000000000000000000000000000000000000000000000000000000000000000",
     });
     const transport = new WhichLlmArtifactTransport(path);
     const result = await transport.send({}, identity);
@@ -115,7 +117,9 @@ describe("WhichLlmArtifactTransport & Invariant Defense", () => {
   });
 
   it("returns UNAVAILABLE when the artifact timestamp exceeds TTL", async () => {
-    const staleDate = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString();
+    const staleDate = new Date(
+      Date.now() - 40 * 24 * 60 * 60 * 1000,
+    ).toISOString();
     const path = validHashedArtifact({
       evaluated_at: staleDate,
       recommendations: {
@@ -146,7 +150,8 @@ describe("WhichLlmArtifactTransport & Invariant Defense", () => {
     expect(result).toMatchObject({
       status: "failure",
       code: "UNAVAILABLE",
-      message: "Recommended local model 'uninstalled-model:70b' is not installed locally in Ollama.",
+      message:
+        "Recommended local model 'uninstalled-model:70b' is not installed locally in Ollama.",
     });
   });
 

@@ -149,3 +149,15 @@ Sub-project 1 of the local-authority build (see `docs/contracts/helix-phase-8-lo
 - Added `.npmignore` to prevent `.ijfw/`, `AGENTS.md`, and `CLAUDE.md` from entering npm packages. Dry-run confirmed zero internal metadata entries.
 - Focused security/browser checks pass: 7 tests.
 - Live authority, signed MSIX, clean-machine lifecycle, remote delivery, and production approval remain unverified.
+
+## Code review remediation (2026-09-13)
+
+- Converted task ID generation from sequential list count to atomic `task_${randomUUID()}` in `src/daemon/server.ts`, preventing task ID collisions during concurrent requests.
+- Implemented TTL-based eviction (1 hour) and capacity bounding on the in-memory idempotency map to prevent memory leaks in long-running daemon sessions.
+- Added request body stream read timeout (30 seconds) in `readJson()` returning 408 `REQUEST_TIMEOUT` to prevent connection stalls.
+- Hardened `serveWebAsset` against path traversal across Windows and POSIX by using `resolve` and checking against `webRoot + path.sep`.
+- Hardened URL-decoded parameter validation for session and task routes (`DELETE /v1/sessions/:id`, `GET /v1/sessions/:id/tasks`, `GET /v1/tasks/:id`, and `POST /v1/tasks/:id/cancel`).
+- Hardened daemon shutdown sequence in `src/index.ts` to ensure `composition.close()` and `taskStore.close()` always run even if `server.close()` encounters an error callback.
+- Added test coverage for concurrent task ID generation, URL parameter validation, and static asset path traversal prevention.
+- Full local gate passes: build, lint, formatting, docs audit, 29 test files, and 150 tests.
+

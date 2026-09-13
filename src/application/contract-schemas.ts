@@ -119,6 +119,14 @@ export const storedTaskSchema = z
   })
   .strict();
 
+export const taskSubmissionSchema = z
+  .object({
+    sessionId: z.string().min(1).max(128),
+    instruction: z.string().min(1).max(32_000),
+    model: z.string().min(1).max(256).optional(),
+  })
+  .strict();
+
 export type ContractModelDecision = z.infer<typeof modelDecisionSchema>;
 export type ContractEffectiveScope = z.infer<typeof effectiveScopeSchema>;
 export type ContractResponseDisclosure = z.infer<
@@ -127,3 +135,4 @@ export type ContractResponseDisclosure = z.infer<
 export type ContractApprovalMetadata = z.infer<typeof approvalMetadataSchema>;
 export type ContractDaemonResponse = z.infer<typeof daemonResponseSchema>;
 export type ContractTaskMetadata = z.infer<typeof taskMetadataSchema>;
+export type ContractTaskSubmission = z.infer<typeof taskSubmissionSchema>;

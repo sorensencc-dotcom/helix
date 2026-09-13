@@ -14,6 +14,7 @@
     "lint": "eslint .",
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"*.json\"",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "cli": "tsx src/cli.ts",
     "package": "npm run build && npm pack --dry-run",
     "package:validate": "node packaging/validate-manifest.mjs",
@@ -26,6 +27,7 @@
     "zod": "^3.25.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^22.15.0",
     "@typescript-eslint/eslint-plugin": "^8.31.0",
     "@typescript-eslint/parser": "^8.31.0",

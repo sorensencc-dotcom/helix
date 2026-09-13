@@ -97,13 +97,22 @@ export class WhichLlmSelectionAdapter {
     const parsed = parseAdapterResponse(whichLlmResponse, result);
     if ("status" in parsed && parsed.status === "failure")
       throw new Error(parsed.code);
-    if (request.requestedModel && parsed.model !== request.requestedModel) {
+    const available =
+      Array.isArray(parsed.availableModels) && parsed.availableModels.length > 0
+        ? parsed.availableModels
+        : [parsed.model];
+    if (
+      request.requestedModel &&
+      !available.includes(request.requestedModel) &&
+      parsed.model !== request.requestedModel
+    ) {
       throw new Error("MODEL_OVERRIDE_DENIED");
     }
+    const selectedModel = request.requestedModel ?? parsed.model;
     return {
-      selectedModel: parsed.model,
-      availableModels: [parsed.model],
-      reason: "authority",
+      selectedModel,
+      availableModels: available,
+      reason: request.requestedModel ? "operator_override" : "authority",
       overrideStatus: request.requestedModel ? "operator" : "auto",
     };
   }

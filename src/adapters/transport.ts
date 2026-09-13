@@ -126,9 +126,10 @@ function buildFtsQuery(rawQuery: string): string {
  * cross-repo import: helix and kb-sync are separate git repos, and this
  * SQL is a stable, small surface against a local-only artifact.
  */
-export class KbSyncContextCacheTransport
-  implements AdapterTransport<Record<string, unknown>, unknown>
-{
+export class KbSyncContextCacheTransport implements AdapterTransport<
+  Record<string, unknown>,
+  unknown
+> {
   public constructor(
     private readonly dbPath: string = DEFAULT_KB_SYNC_DB_PATH,
     private readonly resultLimit = 5,
@@ -246,9 +247,10 @@ export interface WhichLlmArtifactTransportOptions {
  * Verifies self-hash integrity, artifact freshness TTL, and local model installation
  * before approving local execution.
  */
-export class WhichLlmArtifactTransport
-  implements AdapterTransport<Record<string, unknown>, unknown>
-{
+export class WhichLlmArtifactTransport implements AdapterTransport<
+  Record<string, unknown>,
+  unknown
+> {
   public constructor(
     private readonly artifactPath: string = DEFAULT_WHICHLLM_ARTIFACT_PATH,
     private readonly options: WhichLlmArtifactTransportOptions = {},
@@ -285,8 +287,7 @@ export class WhichLlmArtifactTransport
       return {
         status: "failure",
         code: "MALFORMED_RESPONSE",
-        message:
-          "WhichLLM artifact schema validation failed.",
+        message: "WhichLLM artifact schema validation failed.",
       };
     }
 
@@ -312,7 +313,10 @@ export class WhichLlmArtifactTransport
     if (artifact.data.evaluated_at) {
       const evaluatedDate = new Date(artifact.data.evaluated_at).getTime();
       const maxAgeMs = (this.options.maxAgeDays ?? 30) * 24 * 60 * 60 * 1000;
-      if (Number.isFinite(evaluatedDate) && Date.now() - evaluatedDate > maxAgeMs) {
+      if (
+        Number.isFinite(evaluatedDate) &&
+        Date.now() - evaluatedDate > maxAgeMs
+      ) {
         return {
           status: "failure",
           code: "UNAVAILABLE",
@@ -336,9 +340,8 @@ export class WhichLlmArtifactTransport
     if (this.options.installedModelChecker) {
       let isInstalled = false;
       try {
-        isInstalled = await this.options.installedModelChecker(
-          recommendedModel,
-        );
+        isInstalled =
+          await this.options.installedModelChecker(recommendedModel);
       } catch {
         return {
           status: "failure",

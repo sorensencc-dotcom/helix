@@ -47,10 +47,30 @@ server.listen(config.port, config.host);
 
 function shutdown(): void {
   bridgeSupervisor.stop();
-  server.close(() => {
-    composition.close();
-    taskStore.close();
-  });
+  let closed = false;
+  const finalize = (err?: Error) => {
+    if (closed) return;
+    closed = true;
+    if (err) {
+      console.error("Server close error:", err);
+    }
+    try {
+      composition.close();
+    } catch (e) {
+      console.error("Composition close error:", e);
+    }
+    try {
+      taskStore.close();
+    } catch (e) {
+      console.error("TaskStore close error:", e);
+    }
+  };
+
+  try {
+    server.close((err) => finalize(err ?? undefined));
+  } catch (err) {
+    finalize(err instanceof Error ? err : new Error(String(err)));
+  }
 }
 
 process.once("SIGINT", shutdown);

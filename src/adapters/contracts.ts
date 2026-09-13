@@ -55,6 +55,7 @@ export const whichLlmSuccess = z
     status: z.literal("success"),
     provider: z.string().min(1),
     model: z.string().min(1),
+    availableModels: z.array(z.string().min(1)).optional(),
     cloudEnabled: z.boolean(),
   })
   .strict();
