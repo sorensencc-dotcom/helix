@@ -190,7 +190,7 @@ export class KbSyncContextCacheTransport implements AdapterTransport<
     try {
       const stmt = db.prepare(
         `SELECT d.id, d.topic, d.category, d.file_path, d.abstract,
-                snippet(kb_fts, 2, '[MATCH]', '[/MATCH]', '...', 128) AS snippet,
+                snippet(kb_fts, 2, '[MATCH]', '[/MATCH]', '...', 256) AS snippet,
                 bm25(kb_fts) AS rank
          FROM kb_fts JOIN kb_documents d ON d.id = kb_fts.id
          WHERE kb_fts MATCH ?
