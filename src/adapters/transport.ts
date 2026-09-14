@@ -142,7 +142,7 @@ export function buildFtsQuery(rawQuery: string): string {
     .split(/\s+/)
     .map((token) => token.replace(/[^\p{L}\p{N}_-]/gu, ""))
     .filter((token) => token.length > 1 && !stopWords.has(token.toLowerCase()))
-    .slice(0, 8);
+    .slice(0, 4);
   const terms = tokens.map((token) => `"${token.replace(/"/g, '""')}"*`);
   return terms.length > 1 ? terms.join(" AND ") : terms.join(" OR ");
 }

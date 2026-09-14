@@ -21,6 +21,11 @@ describe("adapter transport boundary", () => {
     expect(buildFtsQuery("Summarize the deterministic sync pipeline")).toBe(
       '"deterministic"* AND "sync"* AND "pipeline"*',
     );
+    expect(
+      buildFtsQuery(
+        "What are the stages of the deterministic sync pipeline? Use only retrieved local context.",
+      ),
+    ).toBe('"stages"* AND "deterministic"* AND "sync"* AND "pipeline"*');
   });
   it("fails unavailable transports explicitly", async () => {
     await expect(
