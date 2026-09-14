@@ -38,6 +38,7 @@ test.describe("Helix Browser E2E: Model Selection & Invariant Defense", () => {
     );
     expect(optionValues).toEqual([
       "automatic",
+      "qwen2.5:7b",
       "claude-3-5-sonnet-20241022",
       "gemini-2.0-flash",
       "gpt-4o",
