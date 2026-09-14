@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { createSessionService } from "../src/application/composition-root.js";
+import {
+  createSessionService,
+  LOCAL_TIME_REQUEST,
+} from "../src/application/composition-root.js";
 import type { HelixConfig } from "../src/infrastructure/config.js";
 
 const config: HelixConfig = {
@@ -25,5 +28,11 @@ describe("composition root", () => {
     expect(composition.service).toBeDefined();
     expect(composition.sigil).toBeDefined();
     composition.close();
+  });
+
+  it("recognizes local time requests for deterministic clock handling", () => {
+    expect(LOCAL_TIME_REQUEST.test("what is the time?")).toBe(true);
+    expect(LOCAL_TIME_REQUEST.test("the time")).toBe(true);
+    expect(LOCAL_TIME_REQUEST.test("summarize the time")).toBe(false);
   });
 });

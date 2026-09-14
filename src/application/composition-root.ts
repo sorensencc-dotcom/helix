@@ -28,6 +28,15 @@ import { ComposedSessionService as Service } from "./composed-session-service.js
 import type { AuditEvent, PersistenceRequest } from "./composition-contract.js";
 import type { IdentityEnvelope } from "../domain/identity.js";
 
+export const LOCAL_TIME_REQUEST = /^(?:what(?:'s| is)\s+)?the\s+time\??$/i;
+
+function localTimeAnswer(): string {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "full",
+    timeStyle: "long",
+  }).format(new Date());
+}
+
 export interface SessionServiceComposition {
   readonly service: ComposedSessionService;
   readonly sigil: SigilExecutionAdapter;
@@ -163,6 +172,27 @@ export function createSessionService(
     async respond(
       request: Parameters<LocalCompositionPorts["responses"]["respond"]>[0],
     ) {
+      const instruction =
+        request.payload && typeof request.payload === "object"
+          ? (request.payload as { instruction?: unknown }).instruction
+          : undefined;
+      if (
+        typeof instruction === "string" &&
+        LOCAL_TIME_REQUEST.test(instruction.trim())
+      ) {
+        return {
+          correlationId:
+            `corr_${request.session.sessionId.toLowerCase().replace(/[^a-z0-9-]/g, "-")}` as import("../domain/contracts.js").CorrelationId,
+          answer: `The local time is ${localTimeAnswer()}.`,
+          sourcesUsed: [...request.retrieval.sourcesUsed],
+          modelUsed: request.modelDecision.selectedModel,
+          stateDisclosures: {
+            persistenceMode: request.session.persistenceClass,
+            sourceState: request.retrieval.state,
+            overrideState: request.modelDecision.overrideStatus,
+          },
+        };
+      }
       if (request.modelDecision.selectedModel.startsWith("claude-"))
         return claudeResponse.respond(request);
       if (request.modelDecision.selectedModel === "gpt-4o")
