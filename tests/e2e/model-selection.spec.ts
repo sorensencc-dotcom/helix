@@ -31,7 +31,7 @@ test.describe("Helix Browser E2E: Model Selection & Invariant Defense", () => {
     await expect(modelSelect).toHaveValue("automatic");
 
     const options = modelSelect.locator("option");
-    await expect(options).toHaveCount(5);
+    await expect(options).toHaveCount(6);
 
     const optionValues = await options.evaluateAll((opts) =>
       opts.map((o) => (o as HTMLOptionElement).value),
