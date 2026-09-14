@@ -41,6 +41,34 @@ describe("loadConfig", () => {
     ).toThrow();
   });
 
+  it.each([
+    "http://example.com:11434/api/chat",
+    "http://192.168.1.10:11434/api/chat",
+    "http://0.0.0.0:11434/api/chat",
+  ])("rejects non-loopback Ollama URL %s", (ollamaUrl) => {
+    expect(() =>
+      loadConfig({
+        HELIX_WINDOWS_BRIDGE_URL: bridgeUrl,
+        HELIX_WINDOWS_BRIDGE_COMMAND: bridgeCommand,
+        HELIX_OLLAMA_URL: ollamaUrl,
+      }),
+    ).toThrow("HELIX_OLLAMA_URL must be loopback");
+  });
+
+  it.each([
+    "http://127.0.0.1:11434/api/chat",
+    "http://localhost:11434/api/chat",
+    "http://[::1]:11434/api/chat",
+  ])("accepts loopback Ollama URL %s", (ollamaUrl) => {
+    expect(
+      loadConfig({
+        HELIX_WINDOWS_BRIDGE_URL: bridgeUrl,
+        HELIX_WINDOWS_BRIDGE_COMMAND: bridgeCommand,
+        HELIX_OLLAMA_URL: ollamaUrl,
+      }).ollamaUrl,
+    ).toBe(ollamaUrl);
+  });
+
   it("loads owner-supplied adapter labels without enabling adapters", () => {
     expect(
       loadConfig({

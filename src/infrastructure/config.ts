@@ -9,6 +9,17 @@ export function isLoopbackHost(value: string): boolean {
   );
 }
 
+function isLoopbackUrl(value: string): boolean {
+  try {
+    const hostname = new URL(value).hostname.replace(/^\[|\]$/g, "");
+    return (
+      hostname === "127.0.0.1" || hostname === "localhost" || hostname === "::1"
+    );
+  } catch {
+    return false;
+  }
+}
+
 const configSchema = z.object({
   host: z
     .string()
@@ -22,7 +33,11 @@ const configSchema = z.object({
   sigilExecuteUrl: z.string().url().optional(),
   whichLlmUrl: z.string().url().optional(),
   whichLlmArtifactPath: z.string().min(1).optional(),
-  ollamaUrl: z.string().url().optional(),
+  ollamaUrl: z
+    .string()
+    .url()
+    .refine(isLoopbackUrl, "HELIX_OLLAMA_URL must be loopback")
+    .optional(),
   windowsBridgeUrl: z.string().url(),
   windowsBridgeCommand: z.string().min(1),
 });
