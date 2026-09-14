@@ -27,6 +27,7 @@ import type {
 import { ComposedSessionService as Service } from "./composed-session-service.js";
 import type { AuditEvent, PersistenceRequest } from "./composition-contract.js";
 import type { IdentityEnvelope } from "../domain/identity.js";
+import type { CorrelationId } from "../domain/contracts.js";
 
 export const LOCAL_TIME_REQUEST = /^(?:what(?:'s| is)\s+)?the\s+time\??$/i;
 
@@ -182,7 +183,7 @@ export function createSessionService(
       ) {
         return {
           correlationId:
-            `corr_${request.session.sessionId.toLowerCase().replace(/[^a-z0-9-]/g, "-")}` as import("../domain/contracts.js").CorrelationId,
+            `corr_${request.session.sessionId.toLowerCase().replace(/[^a-z0-9-]/g, "-")}` as CorrelationId,
           answer: `The local time is ${localTimeAnswer()}.`,
           sourcesUsed: [...request.retrieval.sourcesUsed],
           modelUsed: request.modelDecision.selectedModel,
