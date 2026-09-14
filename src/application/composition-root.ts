@@ -147,11 +147,17 @@ export function createSessionService(
     );
   const claudeResponse = new CliResponseAdapter(
     "claude",
-    createCliResponseRunner(process.env.HELIX_CLAUDE_COMMAND ?? "claude.exe"),
+    createCliResponseRunner(
+      process.env.HELIX_CLAUDE_COMMAND ?? "claude.exe",
+      300_000,
+    ),
   );
   const codexResponse = new CliResponseAdapter(
     "codex",
-    createCliResponseRunner(process.env.HELIX_CODEX_COMMAND ?? "codex.cmd"),
+    createCliResponseRunner(
+      process.env.HELIX_CODEX_COMMAND ?? "codex.cmd",
+      300_000,
+    ),
   );
   const responses = overrides.responses ?? {
     async respond(

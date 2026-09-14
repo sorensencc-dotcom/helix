@@ -108,8 +108,23 @@ export class WhichLlmSelectionAdapter {
     if (!candidate.success) throw new Error("MODEL_SELECTION_INVALID_REQUEST");
     const result = await this.transport.send(candidate.data, identity);
     const parsed = parseAdapterResponse(whichLlmResponse, result);
-    if ("status" in parsed && parsed.status === "failure")
+    if ("status" in parsed && parsed.status === "failure") {
+      if (
+        parsed.code === "UNAVAILABLE" &&
+        !request.requestedModel &&
+        request.session.governanceState !== "governed" &&
+        this.explicitModels.length > 0
+      ) {
+        const defaultModel = this.explicitModels[0]!;
+        return {
+          selectedModel: defaultModel,
+          availableModels: [...this.explicitModels],
+          reason: "degraded_default",
+          overrideStatus: "auto",
+        };
+      }
       throw new Error(parsed.code);
+    }
     const available =
       Array.isArray(parsed.availableModels) && parsed.availableModels.length > 0
         ? parsed.availableModels
@@ -257,12 +272,15 @@ export type CliResponseRunner = (args: readonly string[]) => Promise<string>;
 
 export function createCliResponseRunner(
   command: string,
-  timeoutMs = 120_000,
+  timeoutMs = 300_000,
 ): CliResponseRunner {
   return (args) =>
     new Promise((resolve, reject) => {
+      const isCmdOrBat =
+        process.platform === "win32" && /\.(cmd|bat)$/i.test(command);
       const child = spawn(command, args, {
         windowsHide: true,
+        shell: isCmdOrBat,
         stdio: ["pipe", "pipe", "pipe"],
       });
       child.stdin.end();
