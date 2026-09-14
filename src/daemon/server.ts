@@ -317,11 +317,14 @@ export function createDaemon(
             Boolean(config.windowsBridgeUrl && config.windowsBridgeCommand),
             "Windows bridge",
           ),
-          icf: configuredReadiness(Boolean(config.icfResolveUrl), "ICF"),
+          icf: configuredReadiness(
+            Boolean(config.icfResolveUrl || config.kbSyncKnowledgeDbPath),
+            config.icfResolveUrl ? "ICF" : "ICF local cache",
+          ),
           sigil: configuredReadiness(Boolean(config.sigilExecuteUrl), "Sigil"),
           whichLlm: configuredReadiness(
-            Boolean(config.whichLlmUrl),
-            "WhichLLM",
+            Boolean(config.whichLlmUrl || config.whichLlmArtifactPath),
+            config.whichLlmUrl ? "WhichLLM" : "WhichLLM artifact",
           ),
           persistence,
           local: {
