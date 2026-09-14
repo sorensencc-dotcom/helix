@@ -39,6 +39,8 @@ export const icfSuccess = z
     sources: z.array(z.string().min(1)).max(100),
     governed: z.boolean(),
     lineageId: z.string().min(1),
+    context: z.unknown().optional(),
+    contextPacket: z.unknown().optional(),
   })
   .strict();
 export const icfResponse = z.union([icfSuccess, failure]);

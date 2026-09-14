@@ -178,6 +178,14 @@ export class KbSyncContextCacheTransport implements AdapterTransport<
         sources: rows.map((row) => row.file_path),
         governed: true,
         lineageId: `icf_${Date.now().toString(36)}_${rows.length}`,
+        context: rows.map((row) => ({
+          id: row.id,
+          topic: row.topic,
+          category: row.category,
+          source: row.file_path,
+          snippet: row.snippet,
+          rank: row.rank,
+        })),
       };
     } catch {
       return {

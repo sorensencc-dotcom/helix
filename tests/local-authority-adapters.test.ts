@@ -5,6 +5,7 @@ import {
   UnavailableResponseAdapter,
   WhichLlmSelectionAdapter,
   CliResponseAdapter,
+  OllamaResponseAdapter,
 } from "../src/adapters/local-authority-adapters.js";
 import { UnavailableAdapterTransport } from "../src/adapters/transport.js";
 import type { IdentityEnvelope } from "../src/domain/identity.js";
@@ -220,5 +221,46 @@ describe("local authority adapters", () => {
     });
     expect(args).toContain("--no-session-persistence");
     expect(result.answer).toBe("answer");
+  });
+
+  it("delivers retrieved context and local grounding rules to Ollama", async () => {
+    let requestBody:
+      { messages: Array<{ role: string; content: string }> } | undefined;
+    const adapter = new OllamaResponseAdapter(
+      "http://127.0.0.1:11434/api/chat",
+      async (_input, init) => {
+        requestBody = JSON.parse(String(init?.body)) as typeof requestBody;
+        return new Response(
+          JSON.stringify({ message: { content: "grounded answer" } }),
+          { status: 200 },
+        );
+      },
+    );
+
+    await adapter.respond({
+      session,
+      retrieval: {
+        contextPacket: [
+          { source: "docs/helix.md", snippet: "Local retrieval evidence" },
+        ],
+        sourcesUsed: ["docs/helix.md"],
+        lineageRecord: "lin_local",
+        state: "success",
+      },
+      modelDecision: {
+        selectedModel: "qwen2.5:7b",
+        availableModels: ["qwen2.5:7b"],
+        reason: "authority",
+        overrideStatus: "auto",
+      },
+      payload: { instruction: "Summarize the evidence" },
+    });
+
+    expect(requestBody?.messages[0]?.content).toContain("primary source");
+    expect(requestBody?.messages[1]?.content).toContain(
+      "Local retrieval evidence",
+    );
+    expect(requestBody?.messages[1]?.content).toContain("docs/helix.md");
+    expect(requestBody?.messages[1]?.content).toContain("<context>");
   });
 });
