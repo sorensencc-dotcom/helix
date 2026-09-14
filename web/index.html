@@ -22,6 +22,7 @@
       .primary { background: var(--helix-ember); color: #160d08; }
       .secondary { background: transparent; color: var(--helix-text); border-color: var(--helix-border); }
       .search, .composer { width: 100%; border: 1px solid var(--helix-border); background: var(--helix-card); color: var(--helix-text); padding: 11px 12px; outline: none; }
+      .composer { min-height: 46px; max-height: 180px; resize: vertical; line-height: 1.45; }
       .search:focus, .composer:focus { border-color: var(--helix-ember); }
       button:focus-visible, input:focus-visible { outline: 2px solid var(--helix-ember); outline-offset: 3px; }
       .conversation { padding: 10px; margin-top: 3px; color: var(--helix-muted); font-size: .82rem; border-left: 2px solid transparent; }
@@ -76,6 +77,7 @@
             <label for="model-select" class="section-label" style="margin:0 0 0 8px;display:inline-block;">Model</label>
             <select id="model-select" class="secondary" aria-label="Select model" style="padding:4px 8px;font-size:0.68rem;background:var(--helix-card);color:var(--helix-text);">
               <option value="automatic" selected>WhichLLM · Automatic (Local Muscle)</option>
+              <option value="qwen2.5:7b">Ollama · qwen2.5:7b (Local)</option>
               <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
               <option value="gemini-2.0-flash">Antigravity (Gemini 2.0 Flash)</option>
               <option value="gpt-4o">Codex (GPT-4o)</option>
@@ -83,8 +85,8 @@
             </select>
             <button class="secondary" type="button" id="scope">View scope</button>
           </div>
-          <div class="composer-row"><input class="composer" id="prompt" autocomplete="off" placeholder="Ask Helix…" aria-label="Ask Helix" required /><button class="primary" type="submit">Send →</button></div>
-          <div class="disclosure" id="notice">ICF lineage and source disclosure will appear with each governed response.</div>
+          <div class="composer-row"><textarea class="composer" id="prompt" autocomplete="off" placeholder="Ask Helix…" aria-label="Ask Helix" required></textarea><button class="primary" id="send" type="submit">Send →</button></div>
+          <div class="disclosure" id="notice">Press Ctrl+Enter to send · ICF lineage and source disclosure appear with each response.</div>
         </form>
       </main>
     </div>
@@ -150,12 +152,15 @@
       async function connectEvents() { if (state.streamAbort) state.streamAbort.abort(); const controller = new AbortController(); state.streamAbort = controller; while (!controller.signal.aborted) { try { const response = await fetch('/v1/stream?follow=1', { headers: { accept: 'text/event-stream', 'Last-Event-ID': String(state.lastEventId) }, signal: controller.signal }); if (!response.ok) throw new Error(`HTTP_${response.status}`); state.streamRetry = 0; setState('Live stream · connected', true); await readSse(response, controller.signal); } catch (error) { if (controller.signal.aborted) return; state.streamRetry = Math.min(state.streamRetry + 1, 5); setState('Live stream · reconnecting'); $('notice').textContent = `Live updates unavailable (${error.message}); retrying from event ${state.lastEventId}.`; await waitForReconnect(Math.min(1000 * 2 ** (state.streamRetry - 1), 10000), controller.signal); } } }
       async function checkDaemon() { try { const result = await json('/v1/status', undefined, validateStatus); setState(`Daemon · ${result.status}`, true); renderReadiness(result.readiness); await loadSessions(); } catch { setState('Daemon unavailable'); } }
       $('search').addEventListener('input', renderSessions);
+      $('prompt').addEventListener('keydown', (event) => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); $('ask-form').requestSubmit(); } });
       $('menu-toggle').addEventListener('click', () => { const open = $('sidebar').classList.toggle('open'); $('menu-toggle').setAttribute('aria-expanded', String(open)); });
       $('ask-form').addEventListener('submit', async (event) => {
         event.preventDefault();
         const input = $('prompt');
         const text = input.value.trim();
         if (!text) return;
+        const send = $('send');
+        send.disabled = true;
           const modelChoice = $('model-select')?.value;
           const model = modelChoice && modelChoice !== 'automatic' ? modelChoice : undefined;
         try {
@@ -174,6 +179,8 @@
         } catch (error) {
           addMessage(`Request unavailable: ${error.message}`, false, 'No governed response was produced. Check daemon and ICF status before retrying.');
           $('notice').textContent = `Request failed (${error.message}); prompt retained for resubmission.`;
+        } finally {
+          send.disabled = false;
         }
       });
       $('new-session').addEventListener('click', async () => { try { const result = await json('/v1/sessions', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }, validateSession); state.sessionId = result.sessionId; state.tasks.clear(); state.historyRequest += 1; await loadSessions(); clearThread('New local session.', 'Governed content remains session-scoped until explicitly exported.'); } catch (error) { $('notice').textContent = `Session unavailable: ${error.message}`; } });
