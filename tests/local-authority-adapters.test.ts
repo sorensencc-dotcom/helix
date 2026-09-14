@@ -127,6 +127,7 @@ describe("local authority adapters", () => {
         ],
         governed: true,
         lineageId: "lin_drift_20260912_063500",
+        context: [{ snippet: "governed evidence" }],
       }),
     };
     const adapter = new IcfRetrievalAdapter(mockTransport, () => ({
@@ -150,6 +151,72 @@ describe("local authority adapters", () => {
       "upstream:trailhq/Graft@65c2966",
     ]);
     expect(result.lineageRecord).toBe("lin_drift_20260912_063500");
+  });
+
+  it("fails closed for governed retrieval when ICF reports ordinary context", async () => {
+    const adapter = new IcfRetrievalAdapter(
+      {
+        send: async () => ({
+          contract: "helix-adapter.v1",
+          status: "success",
+          sources: ["local:guide"],
+          governed: false,
+          lineageId: "lin_ordinary",
+          context: [{ snippet: "ordinary evidence" }],
+        }),
+      },
+      () => ({
+        ...identity,
+        helixSession: { ...identity.helixSession, governed: true },
+      }),
+    );
+
+    await expect(
+      adapter.retrieve({
+        session: {
+          ...session,
+          governanceState: "governed",
+          persistenceClass: "ram-only",
+        },
+        payload: { query: "governed question" },
+        constraints: { scope: "governed" },
+      }),
+    ).resolves.toMatchObject({
+      contextPacket: null,
+      sourcesUsed: [],
+      state: "fail-closed",
+    });
+  });
+
+  it("fails closed for governed retrieval when ICF returns no usable context", async () => {
+    const adapter = new IcfRetrievalAdapter(
+      {
+        send: async () => ({
+          contract: "helix-adapter.v1",
+          status: "success",
+          sources: ["local:guide"],
+          governed: true,
+          lineageId: "lin_empty",
+          context: [],
+        }),
+      },
+      () => ({
+        ...identity,
+        helixSession: { ...identity.helixSession, governed: true },
+      }),
+    );
+
+    await expect(
+      adapter.retrieve({
+        session: {
+          ...session,
+          governanceState: "governed",
+          persistenceClass: "ram-only",
+        },
+        payload: { query: "governed question" },
+        constraints: { scope: "governed" },
+      }),
+    ).resolves.toMatchObject({ state: "fail-closed" });
   });
 
   it("sends the user instruction as the local retrieval query", async () => {

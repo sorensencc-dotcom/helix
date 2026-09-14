@@ -3,6 +3,7 @@ import {
   adapterVersion,
   icfRequest,
   icfResponse,
+  isUsableIcfContext,
   parseAdapterResponse,
   sigilRequest,
   sigilResponse,
@@ -79,6 +80,7 @@ describe("Phase 8 adapter contract schemas", () => {
           sources: ["fixture:source-001"],
           governed: true,
           lineageId: "lineage-001",
+          context: [{ snippet: "fixture context" }],
         };
     const parsed = parseAdapterResponse(
       icfResponse,
@@ -117,6 +119,13 @@ describe("Phase 8 adapter contract schemas", () => {
       status: "failure",
       code: "MALFORMED_RESPONSE",
     });
+  });
+
+  it("recognizes only non-empty ICF context as usable", () => {
+    expect(isUsableIcfContext(null)).toBe(false);
+    expect(isUsableIcfContext([])).toBe(false);
+    expect(isUsableIcfContext("  ")).toBe(false);
+    expect(isUsableIcfContext([{ snippet: "evidence" }])).toBe(true);
   });
 
   it("negotiates only the expected version, adapter, and auth scheme", () => {

@@ -32,6 +32,15 @@ const failure = z
 export const icfRequest = baseRequest
   .extend({ query: z.string().min(1).max(20_000), governed: z.boolean() })
   .strict();
+
+export function isUsableIcfContext(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "object") return Object.keys(value).length > 0;
+  return true;
+}
+
 export const icfSuccess = z
   .object({
     contract: z.literal(adapterVersion),
@@ -42,7 +51,18 @@ export const icfSuccess = z
     context: z.unknown().optional(),
     contextPacket: z.unknown().optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      !isUsableIcfContext(value.contextPacket) &&
+      !isUsableIcfContext(value.context)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "ICF success response must include usable context.",
+      });
+    }
+  });
 export const icfResponse = z.union([icfSuccess, failure]);
 
 export const whichLlmRequest = baseRequest

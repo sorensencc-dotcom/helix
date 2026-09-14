@@ -12,6 +12,7 @@ import type {
 import {
   icfRequest,
   icfResponse,
+  isUsableIcfContext,
   parseAdapterResponse,
   sigilRequest,
   sigilResponse,
@@ -61,8 +62,15 @@ export class IcfRetrievalAdapter {
     const parsed = parseAdapterResponse(icfResponse, result);
     if ("status" in parsed && parsed.status === "failure")
       return this.failure(request);
+    const contextPacket = parsed.contextPacket ?? parsed.context ?? null;
+    if (
+      request.constraints.scope === "governed" &&
+      (!parsed.governed || !isUsableIcfContext(contextPacket))
+    ) {
+      return this.failure(request);
+    }
     return {
-      contextPacket: parsed.contextPacket ?? parsed.context ?? null,
+      contextPacket,
       sourcesUsed: parsed.sources,
       lineageRecord: parsed.lineageId,
       state: parsed.governed ? "success" : "degraded",
