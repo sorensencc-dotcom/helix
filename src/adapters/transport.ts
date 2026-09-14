@@ -109,6 +109,7 @@ interface KbSyncContextCacheRow {
   readonly category: string;
   readonly file_path: string;
   readonly snippet: string;
+  readonly abstract: string | null;
   readonly rank: number;
 }
 
@@ -188,8 +189,8 @@ export class KbSyncContextCacheTransport implements AdapterTransport<
 
     try {
       const stmt = db.prepare(
-        `SELECT d.id, d.topic, d.category, d.file_path,
-                snippet(kb_fts, 2, '[MATCH]', '[/MATCH]', '...', 32) AS snippet,
+        `SELECT d.id, d.topic, d.category, d.file_path, d.abstract,
+                snippet(kb_fts, 2, '[MATCH]', '[/MATCH]', '...', 128) AS snippet,
                 bm25(kb_fts) AS rank
          FROM kb_fts JOIN kb_documents d ON d.id = kb_fts.id
          WHERE kb_fts MATCH ?
@@ -210,6 +211,7 @@ export class KbSyncContextCacheTransport implements AdapterTransport<
           topic: row.topic,
           category: row.category,
           source: row.file_path,
+          abstract: row.abstract,
           snippet: row.snippet,
           rank: row.rank,
         })),
