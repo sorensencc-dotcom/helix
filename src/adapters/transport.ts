@@ -112,11 +112,38 @@ interface KbSyncContextCacheRow {
   readonly rank: number;
 }
 
-function buildFtsQuery(rawQuery: string): string {
+export function buildFtsQuery(rawQuery: string): string {
   const trimmed = rawQuery.trim();
   if (/["*:]/.test(trimmed) || /\b(AND|OR|NOT)\b/.test(trimmed)) return trimmed;
-  const tokens = trimmed.split(/\s+/).filter(Boolean);
-  return tokens.map((token) => `"${token.replace(/"/g, '""')}"*`).join(" OR ");
+  const stopWords = new Set([
+    "a",
+    "an",
+    "and",
+    "are",
+    "for",
+    "from",
+    "how",
+    "in",
+    "is",
+    "it",
+    "list",
+    "of",
+    "on",
+    "please",
+    "summarize",
+    "the",
+    "this",
+    "to",
+    "what",
+    "with",
+  ]);
+  const tokens = trimmed
+    .split(/\s+/)
+    .map((token) => token.replace(/[^\p{L}\p{N}_-]/gu, ""))
+    .filter((token) => token.length > 1 && !stopWords.has(token.toLowerCase()))
+    .slice(0, 8);
+  const terms = tokens.map((token) => `"${token.replace(/"/g, '""')}"*`);
+  return terms.length > 1 ? terms.join(" AND ") : terms.join(" OR ");
 }
 
 /**

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createIdentityEnvelope } from "../src/domain/identity.js";
 import {
   bindReceipt,
+  buildFtsQuery,
   UnavailableAdapterTransport,
 } from "../src/adapters/transport.js";
 
@@ -16,6 +17,11 @@ const identity = createIdentityEnvelope(
 );
 
 describe("adapter transport boundary", () => {
+  it("builds focused FTS queries from natural-language instructions", () => {
+    expect(buildFtsQuery("Summarize the deterministic sync pipeline")).toBe(
+      '"deterministic"* AND "sync"* AND "pipeline"*',
+    );
+  });
   it("fails unavailable transports explicitly", async () => {
     await expect(
       new UnavailableAdapterTransport("ICF").send({}, identity),
