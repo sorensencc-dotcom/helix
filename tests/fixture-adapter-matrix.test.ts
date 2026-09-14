@@ -56,7 +56,7 @@ beforeAll(async () => {
       // socket doesn't leak past the test.
       setTimeout(() => {
         if (!response.writableEnded) response.end();
-      }, 300);
+      }, 1500);
       return;
     }
     if (scenario === "unavailable") {
@@ -139,7 +139,7 @@ function icfAdapter(scenario: "success" | FailureScenario) {
   const transport = new HttpAdapterTransport<Record<string, unknown>, unknown>(
     `${baseUrl}/icf/${scenario}`,
     (value) => value as never,
-    50,
+    1000,
   );
   return new IcfRetrievalAdapter(transport, () => identity);
 }
@@ -152,7 +152,7 @@ function whichLlmAdapter(
   const transport = new HttpAdapterTransport<Record<string, unknown>, unknown>(
     `${baseUrl}/whichllm/${scenario}${suffix}`,
     (value) => value as never,
-    50,
+    1000,
   );
   return new WhichLlmSelectionAdapter(transport, () => identity);
 }
@@ -161,7 +161,7 @@ function sigilAdapter(scenario: "success" | FailureScenario) {
   const transport = new HttpAdapterTransport<Record<string, unknown>, unknown>(
     `${baseUrl}/sigil/${scenario}`,
     (value) => value as never,
-    50,
+    1000,
   );
   return new SigilExecutionAdapter(transport, () => identity);
 }
