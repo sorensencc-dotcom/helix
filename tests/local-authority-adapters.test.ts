@@ -152,6 +152,34 @@ describe("local authority adapters", () => {
     expect(result.lineageRecord).toBe("lin_drift_20260912_063500");
   });
 
+  it("sends the user instruction as the local retrieval query", async () => {
+    let sent: Record<string, unknown> | undefined;
+    const adapter = new IcfRetrievalAdapter(
+      {
+        send: async (request) => {
+          sent = request;
+          return {
+            contract: "helix-adapter.v1",
+            status: "success",
+            sources: ["local:guide"],
+            governed: false,
+            lineageId: "lin_local",
+            context: [{ snippet: "retrieved evidence" }],
+          };
+        },
+      },
+      () => identity,
+    );
+
+    await adapter.retrieve({
+      session,
+      payload: { instruction: "What is the local answer?" },
+      constraints: { scope: "ordinary" },
+    });
+
+    expect(sent?.query).toBe("What is the local answer?");
+  });
+
   it("selects provider and model when WhichLLM returns success", async () => {
     const mockTransport = {
       send: async () => ({

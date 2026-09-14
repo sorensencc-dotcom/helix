@@ -29,6 +29,15 @@ type IdentityProvider = (
   request: RetrievalRequest | ModelSelectionRequest,
 ) => IdentityEnvelope;
 
+function retrievalQuery(payload: unknown): string {
+  if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+    const instruction = (payload as { instruction?: unknown }).instruction;
+    if (typeof instruction === "string" && instruction.trim().length > 0)
+      return instruction.trim();
+  }
+  return JSON.stringify(payload);
+}
+
 export class IcfRetrievalAdapter {
   public constructor(
     private readonly transport: AdapterTransport<
@@ -44,7 +53,7 @@ export class IcfRetrievalAdapter {
       contract: "helix-adapter.v1",
       correlationId: identity.helixSession.correlationId,
       identity,
-      query: JSON.stringify(request.payload),
+      query: retrievalQuery(request.payload),
       governed: request.constraints.scope === "governed",
     });
     if (!candidate.success) return this.failure(request);
