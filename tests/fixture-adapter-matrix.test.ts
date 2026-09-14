@@ -101,6 +101,12 @@ beforeAll(async () => {
           sources: ["upstream:fixture/source@abc123"],
           governed: true,
           lineageId: "lin_fixture_matrix",
+          context: [
+            {
+              source: "upstream:fixture/source@abc123",
+              snippet: "fixture evidence",
+            },
+          ],
         }),
       );
     } else if (domain === "whichllm") {
