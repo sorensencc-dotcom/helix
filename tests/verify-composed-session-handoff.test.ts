@@ -193,7 +193,10 @@ describe("ComposedSessionService & SessionStore cross-subshell verification", ()
             WORKER_ID: workerId,
             WRITE_COUNT: String(writeCount),
             // Node 22 emits SQLite ExperimentalWarning on worker stderr; keep asserts on real failures.
-            NODE_OPTIONS: [process.env.NODE_OPTIONS, "--disable-warning=ExperimentalWarning"]
+            NODE_OPTIONS: [
+              process.env.NODE_OPTIONS,
+              "--disable-warning=ExperimentalWarning",
+            ]
               .filter(Boolean)
               .join(" "),
           },
