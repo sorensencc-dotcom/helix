@@ -229,7 +229,7 @@ export class KbSyncContextCacheTransport implements AdapterTransport<
 }
 
 const DEFAULT_WHICHLLM_ARTIFACT_PATH =
-  "C:\\dev\\trm\\_integration\\model_selection.json";
+  "C:\\dev\\_integration\\model_selection.json";
 
 function canonicalJson(obj: unknown): string {
   if (obj === null || typeof obj !== "object") {
@@ -274,6 +274,7 @@ const modelSelectionArtifact = z.object({
 
 export interface WhichLlmArtifactTransportOptions {
   installedModelChecker?: (modelName: string) => Promise<boolean> | boolean;
+  listInstalledModels?: () => Promise<readonly string[]> | readonly string[];
   maxAgeDays?: number;
   verifyHash?: boolean;
 }
@@ -395,11 +396,24 @@ export class WhichLlmArtifactTransport implements AdapterTransport<
       }
     }
 
+    let availableModels: string[] = [recommendedModel];
+    if (this.options.listInstalledModels) {
+      try {
+        const installed = await this.options.listInstalledModels();
+        if (Array.isArray(installed) && installed.length > 0) {
+          availableModels = [...new Set([recommendedModel, ...installed])];
+        }
+      } catch {
+        // Keep recommended-only list if Ollama tag listing fails.
+      }
+    }
+
     return {
       contract: "helix-adapter.v1",
       status: "success",
       provider: "local",
       model: recommendedModel,
+      availableModels,
       cloudEnabled: false,
     };
   }

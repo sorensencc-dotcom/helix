@@ -176,6 +176,29 @@ describe("WhichLlmArtifactTransport & Invariant Defense", () => {
     });
   });
 
+  it("includes Ollama tags from listInstalledModels in availableModels", async () => {
+    const path = validHashedArtifact({
+      evaluated_at: new Date().toISOString(),
+      recommendations: {
+        frontier_judgment_anchor: "claude-3-5-sonnet-20241022",
+        local_muscle_anchor: "qwen2.5:7b",
+      },
+    });
+    const transport = new WhichLlmArtifactTransport(path, {
+      installedModelChecker: (model) => model === "qwen2.5:7b",
+      listInstalledModels: () => ["qwen2.5:7b", "llama3.1:8b"],
+    });
+    const result = await transport.send({}, identity);
+    expect(result).toMatchObject({
+      contract: "helix-adapter.v1",
+      status: "success",
+      provider: "local",
+      model: "qwen2.5:7b",
+      availableModels: ["qwen2.5:7b", "llama3.1:8b"],
+      cloudEnabled: false,
+    });
+  });
+
   it("returns UNAVAILABLE when installedModelChecker throws an unexpected error", async () => {
     const path = validHashedArtifact({
       evaluated_at: new Date().toISOString(),

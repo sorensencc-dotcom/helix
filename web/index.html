@@ -62,14 +62,14 @@
         <input class="search" id="search" placeholder="Search conversations" />
         <div class="section-label">Sessions</div>
         <div id="session-list" aria-label="Sessions"><div class="conversation active">No session selected</div></div>
-        <div class="connections"><div>Mode <span class="tag">LOCAL FIXTURE</span></div><div>ICF <span id="icf-readiness">● Unavailable</span></div><div>Sigil <span id="sigil-readiness">● Unavailable</span></div></div>
+        <div class="connections"><div>Mode <span class="tag" id="mode-tag">LOCAL</span></div><div>ICF <span id="icf-readiness">● Unavailable</span></div><div>Sigil <span id="sigil-readiness">● Unavailable</span></div></div>
       </aside>
       <main class="main">
         <header class="topbar">
           <div><button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="sidebar">Menu</button><h1 class="title">Local operator session <span class="badge">Read-only</span></h1></div>
           <div class="top-meta"><span id="model">WhichLLM · automatic</span><span class="badge" id="persistence">Local-only</span><span class="badge" id="daemon-state">Checking…</span></div>
         </header>
-        <div class="notice" role="status" aria-live="polite">LOCAL FIXTURE MODE · No live authority or production control is available.</div>
+        <div class="notice" role="status" aria-live="polite">LOCAL MODE · No live authority or production control is available.</div>
         <section class="thread" id="thread" aria-live="polite"><div class="empty" id="empty">Ask Helix about your governed context.<br /><small>Governed retrieval fails closed while ICF is unavailable.</small></div></section>
         <form class="composer-wrap" id="ask-form">
           <div class="scope">
@@ -78,6 +78,7 @@
             <select id="model-select" class="secondary" aria-label="Select model" style="padding:4px 8px;font-size:0.68rem;background:var(--helix-card);color:var(--helix-text);">
               <option value="automatic" selected>WhichLLM · Automatic (Local Muscle)</option>
               <option value="qwen2.5:7b">Ollama · qwen2.5:7b (Local)</option>
+              <option value="llama3.1:8b">Ollama - llama3.1:8b (Local)</option>
               <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
               <option value="gemini-2.0-flash">Antigravity (Gemini 2.0 Flash)</option>
               <option value="gpt-4o">Codex (GPT-4o)</option>
@@ -132,7 +133,24 @@
       function appendDisclosure(item, label, value) { if (value === undefined || value === null || value === '') return; const row = document.createElement('div'); row.className = 'disclosure-row'; const key = document.createElement('span'); key.className = 'disclosure-key'; key.textContent = label; const content = document.createElement('span'); content.textContent = formatValue(value); row.append(key, content); item.append(row); }
       function renderResponseDetails(item, task) { const response = isRecord(task.response) ? task.response : null; const metadata = isRecord(task.metadata) ? task.metadata : null; if (!response && !metadata) return; const panel = document.createElement('section'); panel.className = 'disclosure response-details'; panel.setAttribute('aria-label', 'Response disclosure'); const disclosure = isRecord(response?.responseDisclosure) ? response.responseDisclosure : null; const scope = isRecord(response?.effectiveScope) ? response.effectiveScope : null; const decision = isRecord(response?.modelDecision) ? response.modelDecision : null; appendDisclosure(panel, 'Model', response?.modelUsed); appendDisclosure(panel, 'Model decision', decision?.reason); appendDisclosure(panel, 'Sources', disclosure?.sourcesUsed ?? response?.sourcesUsed); appendDisclosure(panel, 'Scope', scope?.sourceSelection); appendDisclosure(panel, 'Source state', disclosure?.sourceState ?? scope?.sourceState); appendDisclosure(panel, 'Lineage', disclosure?.lineageId ?? response?.lineageId); appendDisclosure(panel, 'Governance', disclosure?.governanceState ?? response?.governanceState); appendDisclosure(panel, 'Persistence', disclosure?.persistenceMode ?? response?.persistenceMode); appendDisclosure(panel, 'Override', disclosure?.overrideState); appendDisclosure(panel, 'Confidence', response?.confidence); appendDisclosure(panel, 'Approval', metadata?.approvalState); appendDisclosure(panel, 'Receipt', metadata?.receiptState); appendDisclosure(panel, 'Proposed action', response?.proposedActions ?? metadata?.proposedAction); appendDisclosure(panel, 'Sigil reference', metadata?.sigilReference); item.append(panel); }
       function readinessLabel(value) { return `● ${value.state[0].toUpperCase()}${value.state.slice(1)}`; }
-      function renderReadiness(readiness) { if (!readiness) return; $('icf-readiness').textContent = readinessLabel(readiness.icf); $('sigil-readiness').textContent = readinessLabel(readiness.sigil); $('model').textContent = `WhichLLM · ${readinessLabel(readiness.whichLlm).slice(2)}`; $('persistence').textContent = `${readiness.persistence.kind} · ${readiness.persistence.state}`; }
+      function renderReadiness(readiness) {
+        if (!readiness) return;
+        $('icf-readiness').textContent = readinessLabel(readiness.icf);
+        $('sigil-readiness').textContent = readinessLabel(readiness.sigil);
+        $('model').textContent = 'WhichLLM - ' + readinessLabel(readiness.whichLlm).slice(2);
+        $('persistence').textContent = readiness.persistence.kind + ' - ' + readiness.persistence.state;
+        const fixtureReady = readiness.fixture && readiness.fixture.state === 'ready';
+        const modeTag = $('mode-tag');
+        if (modeTag) modeTag.textContent = fixtureReady ? 'LOCAL FIXTURE' : (readiness.local && readiness.local.mode === 'local' ? 'LOCAL / READ-ONLY' : 'LOCAL');
+        const notice = $('notice');
+        if (notice && !notice.dataset.userPinned) {
+          notice.textContent = fixtureReady
+            ? 'LOCAL FIXTURE MODE - No live authority or production control is available.'
+            : 'LOCAL / READ-ONLY MODE - Driven by /v1/status.readiness.fixture (state=' + (readiness.fixture ? readiness.fixture.state : 'unknown') + ').';
+        }
+        const badge = document.querySelector('h1.title .badge');
+        if (badge) badge.textContent = fixtureReady ? 'Fixture' : 'Read-only';
+      }`; $('persistence').textContent = `${readiness.persistence.kind} · ${readiness.persistence.state}`; }
       function clearThread(title, detail) { const empty = document.createElement('div'); empty.className = 'empty'; empty.id = 'empty'; empty.append(title); if (detail) { empty.append(document.createElement('br')); const small = document.createElement('small'); small.textContent = detail; empty.append(small); } $('thread').replaceChildren(empty); }
       function addMessage(text, user, disclosure, task) { $('empty')?.remove(); const item = document.createElement('article'); item.classList.add('message'); if (user) item.classList.add('user'); const bubble = document.createElement('div'); bubble.className = 'bubble'; bubble.textContent = text; item.append(bubble); if (task) { const line = document.createElement('div'); line.className = 'taskline'; const status = document.createElement('span'); status.textContent = task.state; const button = document.createElement('button'); button.className = 'secondary cancel'; button.type = 'button'; button.textContent = 'Cancel task'; button.setAttribute('aria-label', `Cancel task ${task.id}`); button.hidden = terminalStates.has(task.state); line.append(status, button); item.append(line); item.dataset.taskId = task.id; button.addEventListener('click', () => void cancelTask(task.id, item)); renderResponseDetails(item, task); } if (disclosure) { const detail = document.createElement('div'); detail.className = 'disclosure'; detail.textContent = disclosure; item.append(detail); } $('thread').append(item); item.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'end' }); return item; }
       function updateTask(item, task) { const line = item.querySelector('.taskline span'); if (line) line.textContent = task.state; const button = item.querySelector('.cancel'); if (button) button.hidden = terminalStates.has(task.state); if (Object.prototype.hasOwnProperty.call(task, 'response')) item.querySelector('.bubble').textContent = taskText(task); item.querySelector('.response-details')?.remove(); renderResponseDetails(item, task); }
@@ -184,7 +202,7 @@
         }
       });
       $('new-session').addEventListener('click', async () => { try { const result = await json('/v1/sessions', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }, validateSession); state.sessionId = result.sessionId; state.tasks.clear(); state.historyRequest += 1; await loadSessions(); clearThread('New local session.', 'Governed content remains session-scoped until explicitly exported.'); } catch (error) { $('notice').textContent = `Session unavailable: ${error.message}`; } });
-      $('scope').addEventListener('click', () => { $('notice').textContent = 'Scope is fixed to Automatic / Read-only in local fixture mode; no scope-edit route is available.'; });
+      $('scope').addEventListener('click', () => { $('notice').textContent = 'Scope is fixed to Automatic / Read-only (see /v1/status.readiness.fixture); no scope-edit route is available.'; });
       void checkDaemon(); void connectEvents();
     </script>
   </body>

@@ -130,12 +130,42 @@ export function createSessionService(
         (value) => value as never,
       )
     : new KbSyncContextCacheTransport(config.kbSyncKnowledgeDbPath);
+  const ollamaTagsUrl = (
+    config.ollamaUrl ??
+    process.env.HELIX_OLLAMA_URL ??
+    "http://127.0.0.1:11434/api/chat"
+  ).replace(/\/api\/chat\/?$/, "/api/tags");
+
+  async function listOllamaModels(): Promise<string[]> {
+    try {
+      const response = await fetch(ollamaTagsUrl);
+      if (!response.ok) return [];
+      const payload = (await response.json()) as {
+        models?: Array<{ name?: string; model?: string }>;
+      };
+      if (!Array.isArray(payload.models)) return [];
+      return payload.models
+        .map((entry) => entry.name ?? entry.model)
+        .filter((name): name is string => typeof name === "string" && name.length > 0);
+    } catch {
+      return [];
+    }
+  }
+
+  async function isOllamaModelInstalled(modelName: string): Promise<boolean> {
+    const installed = await listOllamaModels();
+    return installed.includes(modelName);
+  }
+
   const whichTransport = config.whichLlmUrl
     ? new HttpAdapterTransport<Record<string, unknown>, unknown>(
         config.whichLlmUrl,
         (value) => value as never,
       )
-    : new WhichLlmArtifactTransport(config.whichLlmArtifactPath);
+    : new WhichLlmArtifactTransport(config.whichLlmArtifactPath, {
+        installedModelChecker: isOllamaModelInstalled,
+        listInstalledModels: listOllamaModels,
+      });
   const sigilTransport = config.sigilExecuteUrl
     ? new HttpAdapterTransport<Record<string, unknown>, unknown>(
         config.sigilExecuteUrl,
@@ -147,6 +177,8 @@ export function createSessionService(
   const models =
     overrides.models ??
     new WhichLlmSelectionAdapter(whichTransport, identity, [
+      "qwen2.5:7b",
+      "llama3.1:8b",
       "claude-3-5-sonnet-20241022",
       "gpt-4o",
     ]);
