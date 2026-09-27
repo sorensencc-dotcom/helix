@@ -332,10 +332,17 @@ export function createDaemon(
             mode: "local" as const,
             reason: "daemon is bound to a loopback host",
           },
-          fixture: {
-            state: "unknown" as const,
-            reason: "fixture mode is not declared by daemon configuration",
-          },
+          fixture: fixtureMode
+            ? {
+                state: "ready" as const,
+                reason:
+                  "HELIX_FIXTURE_MODE is active (local fixture / read-only)",
+              }
+            : {
+                state: "unavailable" as const,
+                reason:
+                  "fixture mode is not active; live local/read-only operator mode",
+              },
         },
       });
       return;
