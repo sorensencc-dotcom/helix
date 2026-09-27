@@ -146,7 +146,9 @@ export function createSessionService(
       if (!Array.isArray(payload.models)) return [];
       return payload.models
         .map((entry) => entry.name ?? entry.model)
-        .filter((name): name is string => typeof name === "string" && name.length > 0);
+        .filter(
+          (name): name is string => typeof name === "string" && name.length > 0,
+        );
     } catch {
       return [];
     }

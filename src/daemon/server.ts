@@ -335,11 +335,13 @@ export function createDaemon(
           fixture: fixtureMode
             ? {
                 state: "ready" as const,
-                reason: "HELIX_FIXTURE_MODE is active (local fixture / read-only)",
+                reason:
+                  "HELIX_FIXTURE_MODE is active (local fixture / read-only)",
               }
             : {
                 state: "unavailable" as const,
-                reason: "fixture mode is not active; live local/read-only operator mode",
+                reason:
+                  "fixture mode is not active; live local/read-only operator mode",
               },
         },
       });
