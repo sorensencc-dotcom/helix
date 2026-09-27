@@ -68,7 +68,7 @@ describe("daemon routes", () => {
         whichLlm: { state: "unavailable" },
         persistence: { state: "ready", kind: "ram-only" },
         local: { state: "ready", mode: "local" },
-        fixture: { state: "unknown" },
+        fixture: { state: "unavailable" },
       },
     });
   });
