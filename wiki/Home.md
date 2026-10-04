@@ -30,11 +30,6 @@ Helix owns session lifecycle, correlation identity, local persistence, and the f
 ## Start here
 
 - [Repository README](README)
-- [Project specification](superpowers/specs/2026-09-10-helix-project-spec.md)
-- [Unified foundation design](superpowers/specs/2026-09-10-helix-unified-foundation-design.md)
-- [Contracts index](contracts/README)
-- [Phase 8 release-readiness design](superpowers/specs/2026-09-10-helix-phase-8-integration-release-readiness-design.md)
-- [Phase 8 implementation plan](superpowers/plans/helix-phase-8-implementation-plan.md)
 
 ## Security posture
 
