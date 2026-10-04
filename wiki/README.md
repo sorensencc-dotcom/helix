@@ -67,13 +67,6 @@ HELIX_WHICHLLM_URL
 
 The local daemon binds to loopback by default. Non-loopback binding is rejected by configuration and at daemon construction.
 
-## Documentation
-
-- [Project specification](docs/superpowers/specs/2026-09-10-helix-project-spec.md)
-- [Unified foundation design](docs/superpowers/specs/2026-09-10-helix-unified-foundation-design.md)
-- [Phase 8 release-readiness design](docs/superpowers/specs/2026-09-10-helix-phase-8-integration-release-readiness-design.md)
-- [Contracts index](docs/contracts/README.md)
-- [Phase 8 implementation plan](docs/superpowers/plans/helix-phase-8-implementation-plan.md)
 
 ## Security and release posture
 
