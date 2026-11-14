@@ -1,0 +1,14 @@
+scripts/start-helix-daemon.ps1
+  h_5c172e9b435f5a 16-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5a223166752f9e57e0f6bc1201e6ac8a9e1d0b37",
+  "prompts": {},
+  "humans": {
+    "h_5c172e9b435f5a": {
+      "author": "Chris Sorensen <sorensencc@gmail.com>"
+    }
+  }
+}
