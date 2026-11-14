@@ -13,4 +13,5 @@ $env:HELIX_OLLAMA_URL = "http://127.0.0.1:11434/api/chat"
 $env:HELIX_CLAUDE_COMMAND = "C:\Users\soren\.local\bin\claude.exe"
 $env:HELIX_CODEX_COMMAND = "C:\Users\soren\AppData\Roaming\npm\codex.cmd"
 
-& npx tsx src/index.ts
+New-Item -ItemType Directory -Force -Path "C:\dev\logs" | Out-Null
+& npx tsx src/index.ts 1>> "C:\dev\logs\helix-daemon.stdout.log" 2>> "C:\dev\logs\helix-daemon.stderr.log"
